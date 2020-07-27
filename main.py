@@ -97,7 +97,7 @@ while True:
             # LdBoxSVC.exe || dnplayer.exe
             if "LdBoxHeadless.exe" == proc.name():
                 ldBoxProc = psutil.Process(proc.pid)
-                if ldBoxProc.memory_info().rss / 1024 / 1024 >= 600 or int(proc.create_time()) + 1800 > time.time():
+                if ldBoxProc.memory_info().rss / 1024 / 1024 >= 600 or int(proc.create_time()) + 1800 <= int(time.time()):
                     procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE)
                     for byteDevice in procList.stdout.splitlines():
                         stringDevice = str(byteDevice, encoding="gbk")
@@ -105,7 +105,9 @@ while True:
                         if deviceAttrList[6] == str(ldBoxProc.pid):
                             handleRunningDevice(deviceAttrList)
         except Exception as e:
-            print(e)
+            if "AccessDenied" not in str(e):
+                print(e)
+
 
     print("sleepAt:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
