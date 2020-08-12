@@ -16,24 +16,36 @@ limitDuration = 3600
 checkPacFlag = False
 reconnectNet = True
 
-
-def restartDevice(deviceAttrList):
-    # running
-    print("%s restart!!!" % (deviceAttrList[1]), flush=True)
-    subprocess.run(ldconsole + " launch --index %s" % (deviceAttrList[0]))
-    time.sleep(3)
-    subprocess.run(ldconsole + " action --index %s --key call.reboot --value com.touchsprite.android" % (deviceAttrList[0]), timeout=5)
-    deviceAliveFlag = False
+def checkDeviceRunning(deviceAttrList, runningStatus):
     for i in range(1, 40):
         # check device alive
         procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
         time.sleep(1)
-        if str(procList.stdout.splitlines()[int(deviceAttrList[0])], encoding="gbk").split(",")[4] == "1":
-            deviceAliveFlag = True
-            break
-    if deviceAliveFlag == False:
-        print("%s cannot run device!!!" % (deviceAttrList[1]), flush=True)
+        if str(procList.stdout.splitlines()[int(deviceAttrList[0])], encoding="gbk").split(",")[4] == runningStatus:
+            return
+    print("%s device running status %sfail!!!" % (deviceAttrList[1], runningStatus), flush=True)
+    return
+
+def restartDevice(deviceAttrList):
+    # running
+    print("%s quit!!!" % (deviceAttrList[1]), flush=True)
+    subprocess.run(ldconsole + " quit  --index %s" % (deviceAttrList[0]), timeout=5)
+    if checkDeviceRunning(deviceAttrList, "0") == False:
         return
+    # set the device info
+    time.sleep(3)
+    print("%s modify!!!" % (deviceAttrList[1]), flush=True)
+    subprocess.run(ldconsole + " modify --index %s --resolution 480,320,160 --cpu 1 --memory 1024" % (deviceAttrList[0]),timeout=5)
+    # run device
+    print("%s launch!!!" % (deviceAttrList[1]), flush=True)
+    subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]), timeout=5)
+    if checkDeviceRunning(deviceAttrList, "1") == False:
+        return
+    # print("%s reboot!!!" % (deviceAttrList[1]), flush=True)
+    # subprocess.run(ldconsole + " action --index %s --key call.reboot --value com.touchsprite.android" % (deviceAttrList[0]), timeout=5)
+    # check device running
+    # if checkDeviceRunning(deviceAttrList, "1") == False:
+    #     return
     print("%s run device!!!" % (deviceAttrList[1]), flush=True)
     touchSpriteFlag = False
     for i in range(1, 20):
@@ -112,11 +124,11 @@ def checkHookApp(deviceAttrList):
     try:
         id5HookStatus = subprocess.run(
             ld + " -s %s adb shell \" ps | grep com.example.id5hook\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, timeout=5)
         id5HookStatus2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.example.id5hook\"" % (
                 deviceAttrList[0]),
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, timeout=5)
         id5HookPsList = id5HookStatus.stdout.splitlines()
         id5HookPsList2 = id5HookStatus2.stdout.splitlines()
         for l in id5HookPsList:
@@ -141,11 +153,11 @@ def checkPac(deviceAttrList):
     try:
         id5HookStatus = subprocess.run(
             ld + " -s %s adb shell \" ps | grep com.android.pacprocessor\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, timeout=5)
         id5HookStatus2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.android.pacprocessor\"" % (
                 deviceAttrList[0]),
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, timeout=5)
         id5HookPsList = id5HookStatus.stdout.splitlines()
         id5HookPsList2 = id5HookStatus2.stdout.splitlines()
         for l in id5HookPsList:
@@ -212,45 +224,14 @@ def checkDeviceRunningHealth(deviceAttrList):
         print("%s fuckCheckDeviceRunningHealth"%(deviceAttrList[1]), flush=True)
         return False
 
-def old():
-    while True:
-        # set global device env
-        subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1")
-        # check network
-        # checkNetWork()
-        # check many exception
-        for proc in psutil.process_iter():
-            try:
-                # LdBoxSVC.exe || dnplayer.exe
-                if "LdBoxHeadless.exe" == proc.name():
-                    ldBoxProc = psutil.Process(proc.pid)
-                    # find ldbox map controller
-                    procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE)
-                    objectDeviceAttrList = ""
-                    for byteDevice in procList.stdout.splitlines():
-                        stringDevice = str(byteDevice, encoding="gbk")
-                        deviceAttrList = stringDevice.split(",")
-                        if deviceAttrList[6] == str(ldBoxProc.pid):
-                            objectDeviceAttrList = deviceAttrList
-                            break
-                    # check ldbox memory and running time and hook app run status
-                    memoryOver = ldBoxProc.memory_info().rss / 1024 / 1024
-                    if memoryOver >= 750 or int(ldBoxProc.create_time()) + 3600 <= int(
-                            time.time()) or checkHookApp(objectDeviceAttrList) == False or checkPac(
-                        objectDeviceAttrList) == False:
-                        print("deviceStatus;memory:%dMB;createTime:%s;checkHookApp:%r;checkPac:%r" % (
-                            memoryOver, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ldBoxProc.create_time())),
-                            checkHookApp(objectDeviceAttrList), checkPac(
-                                objectDeviceAttrList)),
-                              flush=True)
-                        restartDevice(objectDeviceAttrList)
-            except Exception as e:
-                if "AccessDenied" not in str(e):
-                    print(e, flush=True)
 
-        print("sleepAt:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), flush=True)
+def phonelist1(phone):
+    # 取出中间四位
+    list = phone[3:7]
+    # 加密
+    newphone = phone.replace(list, '****')
 
-        time.sleep(60)
+    return newphone
 
 
 def new():
@@ -273,9 +254,6 @@ def new():
             time.sleep(60)
         except Exception as e:
             print(e)
-
-
-
 
 
 new()
