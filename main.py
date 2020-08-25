@@ -10,11 +10,11 @@ ldconsole = ldPath + "ldconsole.exe"
 ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
-limitMemory = 750
+limitMemory = 2048
 limitCpu = 20
 limitDuration = 3600
 checkPacFlag = False
-reconnectNet = True
+reconnectNet = False
 
 def checkDeviceRunning(deviceAttrList, runningStatus):
     for i in range(1, 40):
@@ -38,14 +38,10 @@ def restartDevice(deviceAttrList):
     subprocess.run(ldconsole + " modify --index %s --resolution 480,320,160 --cpu 1 --memory 1024" % (deviceAttrList[0]),timeout=5)
     # run device
     print("%s launch!!!" % (deviceAttrList[1]), flush=True)
+    time.sleep(3)
     subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]), timeout=5)
     if checkDeviceRunning(deviceAttrList, "1") == False:
         return
-    # print("%s reboot!!!" % (deviceAttrList[1]), flush=True)
-    # subprocess.run(ldconsole + " action --index %s --key call.reboot --value com.touchsprite.android" % (deviceAttrList[0]), timeout=5)
-    # check device running
-    # if checkDeviceRunning(deviceAttrList, "1") == False:
-    #     return
     print("%s run device!!!" % (deviceAttrList[1]), flush=True)
     touchSpriteFlag = False
     for i in range(1, 20):
