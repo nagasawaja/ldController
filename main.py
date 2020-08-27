@@ -10,11 +10,12 @@ ldconsole = ldPath + "ldconsole.exe"
 ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
-limitMemory = 2048
-limitCpu = 20
-limitDuration = 3600
+limitMemory = 1024
+limitCpu = 155
+limitDuration = 7200
 checkPacFlag = False
 reconnectNet = False
+
 
 def checkDeviceRunning(deviceAttrList, runningStatus):
     for i in range(1, 40):
@@ -26,23 +27,28 @@ def checkDeviceRunning(deviceAttrList, runningStatus):
     print("%s device running status %sfail!!!" % (deviceAttrList[1], runningStatus), flush=True)
     return
 
+
 def restartDevice(deviceAttrList):
     # running
-    print("%s quit!!!" % (deviceAttrList[1]), flush=True)
     subprocess.run(ldconsole + " quit  --index %s" % (deviceAttrList[0]), timeout=5)
+    print("%s quit!!!" % (deviceAttrList[1]), flush=True)
+    time.sleep(3)
     if checkDeviceRunning(deviceAttrList, "0") == False:
         return
+
     # set the device info
-    time.sleep(3)
-    print("%s modify!!!" % (deviceAttrList[1]), flush=True)
     subprocess.run(ldconsole + " modify --index %s --resolution 480,320,160 --cpu 1 --memory 1024" % (deviceAttrList[0]),timeout=5)
+    print("%s modify!!!" % (deviceAttrList[1]), flush=True)
+    time.sleep(3)
+
     # run device
+    subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]), timeout=5)
     print("%s launch!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(3)
-    subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]), timeout=5)
     if checkDeviceRunning(deviceAttrList, "1") == False:
         return
     print("%s run device!!!" % (deviceAttrList[1]), flush=True)
+    time.sleep(1)
     touchSpriteFlag = False
     for i in range(1, 20):
         touchSpriteRunStatus = subprocess.run(
@@ -179,6 +185,7 @@ def checkExistNoOpenList(deviceInfoStr):
             return True
     return False
 
+
 def checkDeviceRunningHealth(deviceAttrList):
     dnplayerPid = int(deviceAttrList[5])
     ldBoxPid = int(deviceAttrList[6])
@@ -198,7 +205,10 @@ def checkDeviceRunningHealth(deviceAttrList):
             print("%s memory:%dMB;limitMemory:%dMB"%(deviceAttrList[1], (psutil.Process(dnplayerPid).memory_info().rss +psutil.Process(ldBoxPid).memory_info().rss) / 1024 / 1024, limitMemory), flush=True)
             return False
         # check cpu...
-        # psutil.Process(9304).cpu_percent(0)
+        cpuPercent = psutil.Process(ldBoxPid).cpu_percent(interval=1)
+        if cpuPercent >= limitCpu:
+            print("%s cpuPercent over %d" % (deviceAttrList[1], limitCpu), flush=True)
+            return False
         # check alive duration
         if int(psutil.Process(dnplayerPid).create_time()) + limitDuration <= int(time.time()):
             print("%s createTime:%s;maxAliveTime:%s;nowTime:%s"%(deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(dnplayerPid).create_time())), time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(dnplayerPid).create_time() + limitDuration)), time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())), flush=True)
@@ -235,6 +245,7 @@ def new():
         try:
             if reconnectNet == True:
                 checkNetWork()
+            # subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1", timeout=5)
             subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1", timeout=5)
             procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
             for byteDevice in procList.stdout.splitlines():
