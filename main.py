@@ -2,6 +2,10 @@
 import os
 import subprocess
 import time
+import random
+import string
+import randName
+
 import psutil
 import requests
 
@@ -11,10 +15,29 @@ ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
 limitMemory = 1024
-limitCpu = 155
-limitDuration = 7200
+limitCpu = 180
+limitDuration = 3600
 checkPacFlag = False
 reconnectNet = False
+mobileBrand = {"xiaomi":["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10","benija", "somi"],
+               "google":["googlePixel2", "googlePixel3","fancy","tom", "jack", "karsa"],
+               "huawei":["huaweiHonorV9", "huaweiHonorV10", "P30","timi", "jimmy", "vanilla", "knight"],
+               "vivo":["vivoX9Plus", "vivoX10Plus","uzi","clear", "love777","livezzz", "saiwen"],
+               "oppo":["oppoR11Plus", "oppoR10Plus", "oppoR12Plus","xiaohua","xiaoming","chov","dwgZ"],
+               "meizu":["meizuPRO6Plus", "meizuM8", "meizuPRO7Plus","naguli","faker","fucker","zoom"],
+               "PHILIPS":[],"MOTOROLA":[],"SIEMENS":[],"SAMSUNG":[],"Coolpad":[],"koobee":[],"SHARP":[]}
+
+
+def randomPhoneNumber():
+
+    all_phone_nums=set()
+    num_start = ['134', '135', '136', '137', '138', '139', '150', '151', '152', '158', '159', '157', '182', '187', '188',
+    '147', '130', '131', '132', '155', '156', '185', '186', '133', '153', '180', '189']
+
+    start = random.choice(num_start)
+    end = ''.join(random.sample(string.digits,8))
+    res = start+end+'\n'
+    return res
 
 
 def checkDeviceRunning(deviceAttrList, runningStatus):
@@ -37,7 +60,8 @@ def restartDevice(deviceAttrList):
         return
 
     # set the device info
-    subprocess.run(ldconsole + " modify --index %s --resolution 480,320,160 --cpu 1 --memory 1024" % (deviceAttrList[0]),timeout=5)
+    randomManuFacturer = random.choice(list(mobileBrand))
+    subprocess.run(ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320,160 --cpu 1 --memory 1024" % (deviceAttrList[0],randomManuFacturer,randName.gen_two_words("'"), randomPhoneNumber()),timeout=5)
     print("%s modify!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(3)
 
@@ -85,7 +109,7 @@ def restartDevice(deviceAttrList):
                    stdout=subprocess.PIPE, timeout=5)
     print("%s run home!!!" % (deviceAttrList[1]))
     time.sleep(4)
-    subprocess.run(ldconsole + " sortWnd", timeout=5)
+    # subprocess.run(ldconsole + " sortWnd", timeout=5)
     print("%s run sortWnd!!!" % (deviceAttrList[1]))
     time.sleep(2)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value volumedown" % (deviceAttrList[0]),
@@ -246,7 +270,7 @@ def new():
             if reconnectNet == True:
                 checkNetWork()
             # subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1", timeout=5)
-            subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1", timeout=5)
+            subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0   --cleanmode 1", timeout=5)
             procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
             for byteDevice in procList.stdout.splitlines():
                 stringDevice = str(byteDevice, encoding="gbk")
