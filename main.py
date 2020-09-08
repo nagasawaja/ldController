@@ -15,7 +15,7 @@ ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
 limitMemory = 1024
-limitCpu = 180
+limitCpu = 200
 limitDuration = 3600
 checkPacFlag = False
 reconnectNet = False
@@ -55,7 +55,9 @@ def restartDevice(deviceAttrList):
     # running
     subprocess.run(ldconsole + " quit  --index %s" % (deviceAttrList[0]), timeout=5)
     print("%s quit!!!" % (deviceAttrList[1]), flush=True)
-    time.sleep(3)
+    time.sleep(1)
+    killAllRelativeProcess(int(deviceAttrList[6]), int(deviceAttrList[5]))
+    time.sleep(1)
     if checkDeviceRunning(deviceAttrList, "0") == False:
         return
 
@@ -221,6 +223,7 @@ def checkDeviceRunningHealth(deviceAttrList):
         if psutil.pid_exists(dnplayerPid) == False:
             print("%s dnplayerPid not exist" % (deviceAttrList[1]), flush=True)
             return False
+
         if psutil.pid_exists(ldBoxPid) == False:
             print("%s ldboxPid not exist"%(deviceAttrList[1]), flush=True)
             return False
@@ -263,6 +266,20 @@ def phonelist1(phone):
 
     return newphone
 
+
+def killAllRelativeProcess(ldBoxPid, dnPlayerPid):
+    if psutil.pid_exists(ldBoxPid) == True:
+        p = psutil.Process(ldBoxPid)
+        for child in p.children():
+            child.kill()
+        p.kill()
+        if p.parent() != None:
+            p.parent().kill()
+
+    if psutil.pid_exists(dnPlayerPid) == True:
+        psutil.Process(dnPlayerPid).kill()
+
+    return
 
 def new():
     while True:
