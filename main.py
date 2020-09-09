@@ -273,8 +273,6 @@ def killAllRelativeProcess(ldBoxPid, dnPlayerPid):
         for child in p.children():
             child.kill()
         p.kill()
-        if p.parent() != None:
-            p.parent().kill()
 
     if psutil.pid_exists(dnPlayerPid) == True:
         psutil.Process(dnPlayerPid).kill()
