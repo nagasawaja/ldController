@@ -4,8 +4,11 @@ import subprocess
 import time
 import random
 import string
-import randName
 
+import win32con
+import win32gui
+
+import randName
 import psutil
 import requests
 
@@ -15,8 +18,8 @@ ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
 limitMemory = 1024
-limitCpu = 200
-limitDuration = 3600
+limitCpu = 250
+limitDuration = 1800
 checkPacFlag = False
 reconnectNet = False
 mobileBrand = {"xiaomi":["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10","benija", "somi"],
@@ -70,6 +73,9 @@ def restartDevice(deviceAttrList):
     # run device
     subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]), timeout=5)
     print("%s launch!!!" % (deviceAttrList[1]), flush=True)
+    time.sleep(1)
+    deviceAttrList = getDeviceAttrList(deviceAttrList[0])
+    win32gui.ShowWindow(int(deviceAttrList[2]), win32con.SW_MINIMIZE)
     time.sleep(3)
     if checkDeviceRunning(deviceAttrList, "1") == False:
         return
@@ -106,6 +112,7 @@ def restartDevice(deviceAttrList):
         print("%s cannot run touchSprite!!!" % (deviceAttrList[1]))
         return
     print("%s run touchSprite!!!" % (deviceAttrList[1]))
+
     time.sleep(3)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value home" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
@@ -279,6 +286,15 @@ def killAllRelativeProcess(ldBoxPid, dnPlayerPid):
 
     return
 
+def getDeviceAttrList(deviceIndex):
+    procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
+    for byteDevice in procList.stdout.splitlines():
+        stringDevice = str(byteDevice, encoding="gbk")
+        deviceAttrList = stringDevice.split(",")
+        if deviceAttrList[0] == deviceIndex:
+            return deviceAttrList
+
+
 def new():
     while True:
         try:
@@ -300,6 +316,5 @@ def new():
             time.sleep(60)
         except Exception as e:
             print(e)
-
 
 new()
