@@ -17,29 +17,29 @@ ldconsole = ldPath + "ldconsole.exe"
 ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
-limitMemory = 1024
+limitMemory = 2048
 limitCpu = 250
-limitDuration = 1800
+limitDuration = 5000
 checkPacFlag = False
 reconnectNet = False
-mobileBrand = {"xiaomi":["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10","benija", "somi"],
-               "google":["googlePixel2", "googlePixel3","fancy","tom", "jack", "karsa"],
-               "huawei":["huaweiHonorV9", "huaweiHonorV10", "P30","timi", "jimmy", "vanilla", "knight"],
-               "vivo":["vivoX9Plus", "vivoX10Plus","uzi","clear", "love777","livezzz", "saiwen"],
-               "oppo":["oppoR11Plus", "oppoR10Plus", "oppoR12Plus","xiaohua","xiaoming","chov","dwgZ"],
-               "meizu":["meizuPRO6Plus", "meizuM8", "meizuPRO7Plus","naguli","faker","fucker","zoom"],
-               "PHILIPS":[],"MOTOROLA":[],"SIEMENS":[],"SAMSUNG":[],"Coolpad":[],"koobee":[],"SHARP":[]}
+mobileBrand = {"xiaomi": ["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10", "benija", "somi"],
+               "google": ["googlePixel2", "googlePixel3", "fancy", "tom", "jack", "karsa"],
+               "huawei": ["huaweiHonorV9", "huaweiHonorV10", "P30", "timi", "jimmy", "vanilla", "knight"],
+               "vivo": ["vivoX9Plus", "vivoX10Plus", "uzi", "clear", "love777", "livezzz", "saiwen"],
+               "oppo": ["oppoR11Plus", "oppoR10Plus", "oppoR12Plus", "xiaohua", "xiaoming", "chov", "dwgZ"],
+               "meizu": ["meizuPRO6Plus", "meizuM8", "meizuPRO7Plus", "naguli", "faker", "fucker", "zoom"],
+               "PHILIPS": [], "MOTOROLA": [], "SIEMENS": [], "SAMSUNG": [], "Coolpad": [], "koobee": [], "SHARP": []}
 
 
 def randomPhoneNumber():
-
-    all_phone_nums=set()
-    num_start = ['134', '135', '136', '137', '138', '139', '150', '151', '152', '158', '159', '157', '182', '187', '188',
-    '147', '130', '131', '132', '155', '156', '185', '186', '133', '153', '180', '189']
+    all_phone_nums = set()
+    num_start = ['134', '135', '136', '137', '138', '139', '150', '151', '152', '158', '159', '157', '182', '187',
+                 '188',
+                 '147', '130', '131', '132', '155', '156', '185', '186', '133', '153', '180', '189']
 
     start = random.choice(num_start)
-    end = ''.join(random.sample(string.digits,8))
-    res = start+end+'\n'
+    end = ''.join(random.sample(string.digits, 8))
+    res = start + end + '\n'
     return res
 
 
@@ -66,12 +66,15 @@ def restartDevice(deviceAttrList):
 
     # set the device info
     randomManuFacturer = random.choice(list(mobileBrand))
-    subprocess.run(ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320,160 --cpu 1 --memory 1024" % (deviceAttrList[0],randomManuFacturer,randName.gen_two_words("'"), randomPhoneNumber()),timeout=5)
+    subprocess.run(
+        ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320,160 --cpu 1 --memory 2048" % (
+            deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber()), timeout=5)
     print("%s modify!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(3)
 
     # run device
-    subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]), timeout=5)
+    subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]),
+                   timeout=5)
     print("%s launch!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
     deviceAttrList = getDeviceAttrList(deviceAttrList[0])
@@ -80,7 +83,7 @@ def restartDevice(deviceAttrList):
     if checkDeviceRunning(deviceAttrList, "1") == False:
         return
     print("%s run device!!!" % (deviceAttrList[1]), flush=True)
-    time.sleep(1)
+    time.sleep(3)
     touchSpriteFlag = False
     for i in range(1, 20):
         touchSpriteRunStatus = subprocess.run(
@@ -113,18 +116,19 @@ def restartDevice(deviceAttrList):
         return
     print("%s run touchSprite!!!" % (deviceAttrList[1]))
 
-    time.sleep(3)
+    time.sleep(6)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value home" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
     print("%s run home!!!" % (deviceAttrList[1]))
-    time.sleep(4)
-    # subprocess.run(ldconsole + " sortWnd", timeout=5)
+    time.sleep(7)
+    subprocess.run(ldconsole + " sortWnd", timeout=5)
     print("%s run sortWnd!!!" % (deviceAttrList[1]))
-    time.sleep(2)
+    time.sleep(5)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value volumedown" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
     print("%s run script!!!" % (deviceAttrList[1]))
     print("%s run end!!!" % (deviceAttrList[1]))
+    time.sleep(2)
 
 
 def checkNetWork():
@@ -182,6 +186,67 @@ def checkHookApp(deviceAttrList):
         return False
 
 
+def killLeiDianGameCenter(deviceAttrList):
+    try:
+        leiDianGameCenterCmd = subprocess.run(
+            ld + " -s %s adb shell \" ps | grep com.android.flysilkworm\"" % (deviceAttrList[0]),
+            stdout=subprocess.PIPE, timeout=5)
+        leiDianGameCenterCmd2 = subprocess.run(
+            ldconsole + " adb --index %s --command \"shell ps | grep com.android.flysilkworm\"" % (
+                deviceAttrList[0]),
+            stdout=subprocess.PIPE, timeout=5)
+        leiDianGameCenterPsList = leiDianGameCenterCmd.stdout.splitlines()
+        leiDianGameCenterPsList2 = leiDianGameCenterCmd2.stdout.splitlines()
+        for l in leiDianGameCenterPsList:
+            if "com.android.flysilkworm" in str(l, encoding="gbk"):
+                print("%s killLeiDianGameCenter" % (deviceAttrList[1]), flush=True)
+                subprocess.run(
+                    ld + " -s %s adb shell \" kill -9 %s\"" % (deviceAttrList[0], l.split()[1].decode('utf-8')),
+                    stdout=subprocess.PIPE, timeout=5)
+                return True
+        for l in leiDianGameCenterPsList2:
+            if "com.android.flysilkworm" in str(l, encoding="gbk"):
+                print("%s killLeiDianGameCenter2" % (deviceAttrList[1]), flush=True)
+                subprocess.run(
+                    ldconsole + " adb --index %s --command \"shell kill -9 %s\"" % (
+                        deviceAttrList[0], l.split()[1].decode('utf-8')),
+                    stdout=subprocess.PIPE, timeout=5)
+                return True
+
+    except Exception as e:
+        print("killLeiDianGameCenterFail", flush=True)
+        print(e, flush=True)
+        return False
+
+
+def checkTouchSprite(deviceAttrList):
+    try:
+        touchspriteCmd = subprocess.run(
+            ld + " -s %s adb shell \" ps | grep com.touchsprite.android\"" % (deviceAttrList[0]),
+            stdout=subprocess.PIPE, timeout=5)
+        touchspriteCmd2 = subprocess.run(
+            ldconsole + " adb --index %s --command \"shell ps | grep com.touchsprite.android\"" % (
+                deviceAttrList[0]),
+            stdout=subprocess.PIPE, timeout=5)
+        touchspritePsList = touchspriteCmd.stdout.splitlines()
+        touchspritePsList2 = touchspriteCmd2.stdout.splitlines()
+        for l in touchspritePsList:
+            if "com.touchsprite.android" in str(l, encoding="gbk"):
+                # print("%s touchspriteSuc" % (deviceAttrList[1]), flush=True)
+                return True
+        for l in touchspritePsList2:
+            if "com.touchsprite.android" in str(l, encoding="gbk"):
+                # print("%s touchspriteSuc2" % (deviceAttrList[1]), flush=True)
+                return True
+
+        print("%s touchspriteFail" % (deviceAttrList[1]), flush=True)
+        return False
+    except Exception as e:
+        print("touchspriteFail2", flush=True)
+        print(e, flush=True)
+        return False
+
+
 def checkPac(deviceAttrList):
     if "NewAccount" not in deviceAttrList[1]:
         return True
@@ -232,11 +297,14 @@ def checkDeviceRunningHealth(deviceAttrList):
             return False
 
         if psutil.pid_exists(ldBoxPid) == False:
-            print("%s ldboxPid not exist"%(deviceAttrList[1]), flush=True)
+            print("%s ldboxPid not exist" % (deviceAttrList[1]), flush=True)
             return False
         # check memory
-        if (psutil.Process(dnplayerPid).memory_info().rss +psutil.Process(ldBoxPid).memory_info().rss) / 1024 / 1024 > limitMemory:
-            print("%s memory:%dMB;limitMemory:%dMB"%(deviceAttrList[1], (psutil.Process(dnplayerPid).memory_info().rss +psutil.Process(ldBoxPid).memory_info().rss) / 1024 / 1024, limitMemory), flush=True)
+        if (psutil.Process(dnplayerPid).memory_info().rss + psutil.Process(
+                ldBoxPid).memory_info().rss) / 1024 / 1024 > limitMemory:
+            print("%s memory:%dMB;limitMemory:%dMB" % (deviceAttrList[1], (
+                    psutil.Process(dnplayerPid).memory_info().rss + psutil.Process(
+                ldBoxPid).memory_info().rss) / 1024 / 1024, limitMemory), flush=True)
             return False
         # check cpu...
         cpuPercent = psutil.Process(ldBoxPid).cpu_percent(interval=1)
@@ -245,23 +313,43 @@ def checkDeviceRunningHealth(deviceAttrList):
             return False
         # check alive duration
         if int(psutil.Process(dnplayerPid).create_time()) + limitDuration <= int(time.time()):
-            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s"%(deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(dnplayerPid).create_time())), time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(dnplayerPid).create_time() + limitDuration)), time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())), flush=True)
+            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s" % (deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S",
+                                                                                                    time.localtime(
+                                                                                                        psutil.Process(
+                                                                                                            dnplayerPid).create_time())),
+                                                                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(
+                                                                       psutil.Process(
+                                                                           dnplayerPid).create_time() + limitDuration)),
+                                                                   time.strftime("%Y-%m-%d %H:%M:%S",
+                                                                                 time.localtime())), flush=True)
             return False
         if int(psutil.Process(ldBoxPid).create_time()) + limitDuration <= int(time.time()):
-            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s"%(deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(ldBoxPid).create_time())), time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(ldBoxPid).create_time() + limitDuration)), time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())), flush=True)
+            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s" % (deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S",
+                                                                                                    time.localtime(
+                                                                                                        psutil.Process(
+                                                                                                            ldBoxPid).create_time())),
+                                                                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(
+                                                                       psutil.Process(
+                                                                           ldBoxPid).create_time() + limitDuration)),
+                                                                   time.strftime("%Y-%m-%d %H:%M:%S",
+                                                                                 time.localtime())), flush=True)
             return False
         # check hook app
         if checkHookApp(deviceAttrList) == False:
-            print("%s checkHookApp Fail"%(deviceAttrList[1]), flush=True)
+            print("%s checkHookApp Fail" % (deviceAttrList[1]), flush=True)
             return False
         # check Pac
         if checkPacFlag == True and checkPac(deviceAttrList) == False:
             print("%s checkPacFlag Fail" % (deviceAttrList[1]), flush=True)
             return False
+        # check touchSprite
+        if checkTouchSprite(deviceAttrList) == False:
+            print("%s checkTouchSprite Fail" % (deviceAttrList[1]), flush=True)
+            return False
         return True
     except Exception as e:
         print(e, flush=True)
-        print("%s fuckCheckDeviceRunningHealth"%(deviceAttrList[1]), flush=True)
+        print("%s fuckCheckDeviceRunningHealth" % (deviceAttrList[1]), flush=True)
         return False
 
 
@@ -285,6 +373,7 @@ def killAllRelativeProcess(ldBoxPid, dnPlayerPid):
         psutil.Process(dnPlayerPid).kill()
 
     return
+
 
 def getDeviceAttrList(deviceIndex):
     procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
