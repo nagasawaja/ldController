@@ -13,7 +13,7 @@ import psutil
 import requests
 
 ldPath = "C:\ChangZhi\dnplayer2\\"
-ldconsole = ldPath + "ldconsole.exe"
+ldconsole = ldPath + "ldconsole.exe "
 ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
@@ -22,6 +22,10 @@ limitCpu = 250
 limitDuration = 5000
 checkPacFlag = False
 reconnectNet = False
+showWindowFlag = True
+sortWndFlag = False
+deviceCpuNum = 2
+deviceMemoryNum = 2048
 mobileBrand = {"xiaomi": ["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10", "benija", "somi"],
                "google": ["googlePixel2", "googlePixel3", "fancy", "tom", "jack", "karsa"],
                "huawei": ["huaweiHonorV9", "huaweiHonorV10", "P30", "timi", "jimmy", "vanilla", "knight"],
@@ -44,91 +48,139 @@ def randomPhoneNumber():
 
 
 def checkDeviceRunning(deviceAttrList, runningStatus):
-    for i in range(1, 40):
-        # check device alive
-        procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
-        time.sleep(1)
-        if str(procList.stdout.splitlines()[int(deviceAttrList[0])], encoding="gbk").split(",")[4] == runningStatus:
-            return
-    print("%s device running status %sfail!!!" % (deviceAttrList[1], runningStatus), flush=True)
-    return
+    try:
+        for i in range(1, 40):
+            # check device alive
+            procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
+            time.sleep(1)
+            if str(procList.stdout.splitlines()[int(deviceAttrList[0])], encoding="gbk").split(",")[4] == runningStatus:
+                return True
+        print("%s device running status %sfail!!!" % (deviceAttrList[1], runningStatus), flush=True)
+        return False
+    except Exception as e:
+        print("checkDeviceRunningFail", flush=True)
+        print(e, flush=True)
+        return False
+
+
+def hideDeviceWindow(deviceAttrList):
+    try:
+        win32gui.ShowWindow(int(deviceAttrList[2]), win32con.SW_MINIMIZE)
+        return True
+    except Exception as e:
+        print("showDeviceWindowFail", flush=True)
+        print(e, flush=True)
+        return False
 
 
 def restartDevice(deviceAttrList):
     # running
-    subprocess.run(ldconsole + " quit  --index %s" % (deviceAttrList[0]), timeout=5)
-    print("%s quit!!!" % (deviceAttrList[1]), flush=True)
+    subprocess.run(ldconsole + " quit --index %s" % (deviceAttrList[0]), timeout=5)
+    print("%s deviceQuit!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
-    killAllRelativeProcess(int(deviceAttrList[6]), int(deviceAttrList[5]))
-    time.sleep(1)
-    if checkDeviceRunning(deviceAttrList, "0") == False:
+    if killAllRelativeProcess(int(deviceAttrList[6]), int(deviceAttrList[5])) is False:
         return
-
+    time.sleep(1)
+    if checkDeviceRunning(deviceAttrList, "0") is False:
+        return
     # set the device info
     randomManuFacturer = random.choice(list(mobileBrand))
-    subprocess.run(
-        ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320,160 --cpu 1 --memory 2048" % (
-            deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber()), timeout=5)
-    print("%s modify!!!" % (deviceAttrList[1]), flush=True)
-    time.sleep(3)
-
+    modifyParamsStr = ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320,160 --cpu %s --memory %s" % (
+        deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber(), deviceCpuNum,
+        deviceMemoryNum)
+    subprocess.run(modifyParamsStr, timeout=5)
+    print("%s modifyDeviceParams!!!" % (deviceAttrList[1], modifyParamsStr), flush=True)
+    time.sleep(1)
+    # subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1", timeout=5)
+    subprocess.run(ldconsole + " globalsetting --fps 10 --audio 0   --cleanmode 1", timeout=5)
+    print("%s globalSetting!!!" % (deviceAttrList[1]), flush=True)
+    time.sleep(1)
     # run device
-    subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]),
-                   timeout=5)
-    print("%s launch!!!" % (deviceAttrList[1]), flush=True)
+    # subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]),
+    #                timeout=5)
+    subprocess.run(ldconsole + "launch --index %s" % (deviceAttrList[0]), timeout=5)
+    print("%s runDeviceBegin!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
     deviceAttrList = getDeviceAttrList(deviceAttrList[0])
-    win32gui.ShowWindow(int(deviceAttrList[2]), win32con.SW_MINIMIZE)
-    time.sleep(3)
-    if checkDeviceRunning(deviceAttrList, "1") == False:
+    if deviceAttrList is False:
         return
-    print("%s run device!!!" % (deviceAttrList[1]), flush=True)
-    time.sleep(3)
-    touchSpriteFlag = False
-    for i in range(1, 20):
-        touchSpriteRunStatus = subprocess.run(
-            ld + " -s %s adb shell \" dumpsys activity activities | grep mFocusedActivity\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=10)
-        touchSpriteRunStatus2 = subprocess.run(
-            ldconsole + " adb --index %s --command \"shell dumpsys activity activities | grep mFocusedActivity\"" % (
-                deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=10)
-        touchSpritePsList = touchSpriteRunStatus.stdout.splitlines()
-        touchSpritePsList2 = touchSpriteRunStatus2.stdout.splitlines()
-        tpInFlag = False
-        for tp in touchSpritePsList:
-            if "com.touchsprite.android/.activity.MainActivity" in str(tp, encoding="gbk"):
-                tpInFlag = True
-                break
-        if tpInFlag == True:
-            touchSpriteFlag = True
-            break
-        for tp in touchSpritePsList2:
-            if "com.touchsprite.android/.activity.MainActivity" in str(tp, encoding="gbk"):
-                tpInFlag = True
-                break
-        if tpInFlag == True:
-            touchSpriteFlag = True
-            break
-        time.sleep(1)
-    if touchSpriteFlag == False:
-        print("%s cannot run touchSprite!!!" % (deviceAttrList[1]))
+    if int(deviceAttrList[2]) == 0:
+        print("%s devicePidIsZero!!!" % (deviceAttrList[1]), flush=True)
         return
-    print("%s run touchSprite!!!" % (deviceAttrList[1]))
+    if showWindowFlag is False:
+        print("%s hideDevice!!!" % (deviceAttrList[1]), flush=True)
+        hideDeviceWindow(deviceAttrList)
 
-    time.sleep(6)
+    if checkDeviceRunning(deviceAttrList, "1") is False:
+        return
+    print("%s runDeviceSuc!!!" % (deviceAttrList[1]), flush=True)
+    time.sleep(3)
+    # mFocusedActivity => mResume，maybe different android version ，mResume is current mainActive
+    if checkCurrentActive(deviceAttrList, 20, "com.android.launcher3/.Launcher") is False:
+        print("%s cannotRunMainActive!!!" % (deviceAttrList[1]))
+        return
+    print("%s runMainActive!!!" % (deviceAttrList[1]))
+    time.sleep(3)
+    # run touchSprite
+    subprocess.run(ldconsole + " runapp --index %s --packagename com.touchsprite.android" % (deviceAttrList[0]),
+                   stdout=subprocess.PIPE, timeout=5)
+    if checkCurrentActive(deviceAttrList, 10, "com.touchsprite.android/.activity.MainActivity") is False:
+        print("%s cannotRunTouchSprite!!!" % (deviceAttrList[1]))
+        return
+    print("%s runTouchSprite!!!" % (deviceAttrList[1]))
+    time.sleep(3)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value home" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
-    print("%s run home!!!" % (deviceAttrList[1]))
-    time.sleep(7)
-    subprocess.run(ldconsole + " sortWnd", timeout=5)
-    print("%s run sortWnd!!!" % (deviceAttrList[1]))
-    time.sleep(5)
+    print("%s runHome!!!" % (deviceAttrList[1]))
+    if checkCurrentActive(deviceAttrList, 10, "com.android.launcher3/.Launcher") is False:
+        print("%s cannotRunMainActive2!!!" % (deviceAttrList[1]))
+        return
+    print("%s runMainActive2!!!" % (deviceAttrList[1]))
+    time.sleep(3)
+    if sortWndFlag is True:
+        subprocess.run(ldconsole + " sortWnd", timeout=5)
+        print("%s runSortWnd!!!" % (deviceAttrList[1]))
+        time.sleep(5)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value volumedown" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
-    print("%s run script!!!" % (deviceAttrList[1]))
-    print("%s run end!!!" % (deviceAttrList[1]))
+    print("%s runScript!!!" % (deviceAttrList[1]))
     time.sleep(2)
+
+
+def checkCurrentActive(deviceAttrList, retryTimes, activeName):
+    try:
+        currentActiveFlag = False
+        for i in range(1, retryTimes):
+            runStatus = subprocess.run(
+                ld + " -s %s adb shell \" dumpsys activity activities | grep mResume\"" % (deviceAttrList[0]),
+                stdout=subprocess.PIPE, timeout=10)
+            runStatus2 = subprocess.run(
+                ldconsole + " adb --index %s --command \"shell dumpsys activity activities | grep mResume\"" % (
+                    deviceAttrList[0]),
+                stdout=subprocess.PIPE, timeout=10)
+            mResumeList = runStatus.stdout.splitlines()
+            mResumeList2 = runStatus2.stdout.splitlines()
+            tpInFlag = False
+            for tp in mResumeList:
+                if activeName in str(tp, encoding="gbk"):
+                    tpInFlag = True
+                    break
+            if tpInFlag == True:
+                currentActiveFlag = True
+                break
+            for tp in mResumeList2:
+                if activeName in str(tp, encoding="gbk"):
+                    tpInFlag = True
+                    break
+            if tpInFlag == True:
+                currentActiveFlag = True
+                break
+            time.sleep(1)
+        return currentActiveFlag
+    except Exception as e:
+        print("checkCurrentActiveFail", flush=True)
+        print(e, flush=True)
+        return False
 
 
 def checkNetWork():
@@ -363,25 +415,34 @@ def phonelist1(phone):
 
 
 def killAllRelativeProcess(ldBoxPid, dnPlayerPid):
-    if psutil.pid_exists(ldBoxPid) == True:
-        p = psutil.Process(ldBoxPid)
-        for child in p.children():
-            child.kill()
-        p.kill()
+    try:
+        if psutil.pid_exists(ldBoxPid) == True:
+            p = psutil.Process(ldBoxPid)
+            for child in p.children():
+                child.kill()
+            p.kill()
 
-    if psutil.pid_exists(dnPlayerPid) == True:
-        psutil.Process(dnPlayerPid).kill()
-
-    return
+        if psutil.pid_exists(dnPlayerPid) == True:
+            psutil.Process(dnPlayerPid).kill()
+        return True
+    except Exception as e:
+        print(e, flush=True)
+        print("killAllRelativeProcessFail", flush=True)
+        return False
 
 
 def getDeviceAttrList(deviceIndex):
-    procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
-    for byteDevice in procList.stdout.splitlines():
-        stringDevice = str(byteDevice, encoding="gbk")
-        deviceAttrList = stringDevice.split(",")
-        if deviceAttrList[0] == deviceIndex:
-            return deviceAttrList
+    try:
+        procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
+        for byteDevice in procList.stdout.splitlines():
+            stringDevice = str(byteDevice, encoding="gbk")
+            deviceAttrList = stringDevice.split(",")
+            if deviceAttrList[0] == deviceIndex:
+                return deviceAttrList
+    except Exception as e:
+        print(e, flush=True)
+        print("getDeviceAttrListFail", flush=True)
+        return False
 
 
 def new():
@@ -389,8 +450,6 @@ def new():
         try:
             if reconnectNet == True:
                 checkNetWork()
-            # subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1", timeout=5)
-            subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0   --cleanmode 1", timeout=5)
             procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
             for byteDevice in procList.stdout.splitlines():
                 stringDevice = str(byteDevice, encoding="gbk")
