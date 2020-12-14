@@ -4,10 +4,7 @@ import subprocess
 import time
 import random
 import string
-
 import win32con
-import win32gui
-
 import randName
 import psutil
 import requests
@@ -85,9 +82,11 @@ def restartDevice(deviceAttrList):
         return
     # set the device info
     randomManuFacturer = random.choice(list(mobileBrand))
-    modifyParamsStr = ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320,160 --cpu %s --memory %s" % (
-        deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber(), deviceCpuNum,
-        deviceMemoryNum)
+    modifyParamsStr = ldconsole + "modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320," \
+                                  "160 --cpu %s --memory %s" % (
+                          deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber(),
+                          deviceCpuNum,
+                          deviceMemoryNum)
     subprocess.run(modifyParamsStr, timeout=5)
     print("%s modifyDeviceParams!!!" % (deviceAttrList[1], modifyParamsStr), flush=True)
     time.sleep(1)
@@ -160,19 +159,19 @@ def checkCurrentActive(deviceAttrList, retryTimes, activeName):
                 stdout=subprocess.PIPE, timeout=10)
             mResumeList = runStatus.stdout.splitlines()
             mResumeList2 = runStatus2.stdout.splitlines()
-            tpInFlag = False
+            activeNameInFlag = False
             for tp in mResumeList:
                 if activeName in str(tp, encoding="gbk"):
-                    tpInFlag = True
+                    activeNameInFlag = True
                     break
-            if tpInFlag == True:
+            if activeNameInFlag is True:
                 currentActiveFlag = True
                 break
             for tp in mResumeList2:
                 if activeName in str(tp, encoding="gbk"):
-                    tpInFlag = True
+                    activeNameInFlag = True
                     break
-            if tpInFlag == True:
+            if activeNameInFlag is True:
                 currentActiveFlag = True
                 break
             time.sleep(1)
@@ -344,11 +343,11 @@ def checkDeviceRunningHealth(deviceAttrList):
         if runningStatus != "1":
             return False
         # check pid exists
-        if psutil.pid_exists(dnplayerPid) == False:
+        if psutil.pid_exists(dnplayerPid) is False:
             print("%s dnplayerPid not exist" % (deviceAttrList[1]), flush=True)
             return False
 
-        if psutil.pid_exists(ldBoxPid) == False:
+        if psutil.pid_exists(ldBoxPid) is False:
             print("%s ldboxPid not exist" % (deviceAttrList[1]), flush=True)
             return False
         # check memory
@@ -387,7 +386,7 @@ def checkDeviceRunningHealth(deviceAttrList):
                                                                                  time.localtime())), flush=True)
             return False
         # check hook app
-        if checkHookApp(deviceAttrList) == False:
+        if checkHookApp(deviceAttrList) is False:
             print("%s checkHookApp Fail" % (deviceAttrList[1]), flush=True)
             return False
         # check Pac
@@ -395,7 +394,7 @@ def checkDeviceRunningHealth(deviceAttrList):
             print("%s checkPacFlag Fail" % (deviceAttrList[1]), flush=True)
             return False
         # check touchSprite
-        if checkTouchSprite(deviceAttrList) == False:
+        if checkTouchSprite(deviceAttrList) is False:
             print("%s checkTouchSprite Fail" % (deviceAttrList[1]), flush=True)
             return False
         return True
@@ -409,20 +408,20 @@ def phonelist1(phone):
     # 取出中间四位
     list = phone[3:7]
     # 加密
-    newphone = phone.replace(list, '****')
+    newPhone = phone.replace(list, '****')
 
-    return newphone
+    return newPhone
 
 
 def killAllRelativeProcess(ldBoxPid, dnPlayerPid):
     try:
-        if psutil.pid_exists(ldBoxPid) == True:
+        if psutil.pid_exists(ldBoxPid) is True:
             p = psutil.Process(ldBoxPid)
             for child in p.children():
                 child.kill()
             p.kill()
 
-        if psutil.pid_exists(dnPlayerPid) == True:
+        if psutil.pid_exists(dnPlayerPid) is True:
             psutil.Process(dnPlayerPid).kill()
         return True
     except Exception as e:
@@ -448,21 +447,22 @@ def getDeviceAttrList(deviceIndex):
 def new():
     while True:
         try:
-            if reconnectNet == True:
+            if reconnectNet is True:
                 checkNetWork()
             procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
             for byteDevice in procList.stdout.splitlines():
                 stringDevice = str(byteDevice, encoding="gbk")
-                if checkExistNoOpenList(stringDevice) == True:
+                if checkExistNoOpenList(stringDevice) is True:
                     # no handle this device that name exist in noOpenList
                     continue
                 deviceAttrList = stringDevice.split(",")
                 # check device hardware
-                if checkDeviceRunningHealth(deviceAttrList) == False:
+                if checkDeviceRunningHealth(deviceAttrList) is False:
                     restartDevice(deviceAttrList)
             print("sleepAt:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), flush=True)
             time.sleep(60)
         except Exception as e:
             print(e)
+
 
 new()
