@@ -5,6 +5,7 @@ import time
 import random
 import string
 import win32con
+import win32gui
 import randName
 import psutil
 import requests
