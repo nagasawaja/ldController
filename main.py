@@ -15,22 +15,33 @@ ldconsole = ldPath + "ldconsole.exe "
 ld = ldPath + "ld.exe"
 lastReconnectTime = time.time()
 noOpenList = ["laji"]
-limitMemory = 2048
+checkPacFlag = False  # check device pac status,if need pac proxy so set true
+reconnectNet = False  # reconnect pc adsl
+showWindowFlag = True  # show device on the screen
+sortWndFlag = True  # adb sort the device
+limitMemory = 2048  # max limit memory
 limitCpu = 250
-limitDuration = 5000
-checkPacFlag = False
-reconnectNet = False
-showWindowFlag = True
-sortWndFlag = False
-deviceCpuNum = 2
-deviceMemoryNum = 2048
+limitDuration = 5000  # max lifetime
+deviceCpuNum = 2  # deivce init cpu num
+deviceMemoryNum = 2048  # device init memory num
+resolutionModelList = [{"x": "480", "y": "320", "dpi": "160"},
+                       {"x": "1334", "y": "750", "dpi": "320"}]  # recommend resolution list
+resolutionModel = 0  # select a resolutionModelList index
+deviceMaxFps = 15
+deviceAudio = 15  # 音频，打开=1，关闭=0
+deviceFastplay = 1  # 快速显示模式，打开=1，关闭=0
+deviceCleanmode = 1  # 干净模式，目测是去广告用的
+# 15、downcpu 网友吹牛逼，不知道实际作用。
+# downcpu <--name mnq_name | --index mnq_idx> --rate <0~100>
+# 本人的问道游戏测试，downcpu --index 0 --rate 50，效果很好！
 mobileBrand = {"xiaomi": ["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10", "benija", "somi"],
                "google": ["googlePixel2", "googlePixel3", "fancy", "tom", "jack", "karsa"],
                "huawei": ["huaweiHonorV9", "huaweiHonorV10", "P30", "timi", "jimmy", "vanilla", "knight"],
                "vivo": ["vivoX9Plus", "vivoX10Plus", "uzi", "clear", "love777", "livezzz", "saiwen"],
                "oppo": ["oppoR11Plus", "oppoR10Plus", "oppoR12Plus", "xiaohua", "xiaoming", "chov", "dwgZ"],
                "meizu": ["meizuPRO6Plus", "meizuM8", "meizuPRO7Plus", "naguli", "faker", "fucker", "zoom"],
-               "PHILIPS": [], "MOTOROLA": [], "SIEMENS": [], "SAMSUNG": [], "Coolpad": [], "koobee": [], "SHARP": []}
+               "PHILIPS": [], "MOTOROLA": [], "SIEMENS": [], "SAMSUNG": [], "Coolpad": [], "koobee": [], "SHARP": [],
+               "LG": [], "ZTE": [], "Oukitel": [], "Micromax": [], "LeEco": [], "Lumia": []}
 
 
 def randomPhoneNumber():
@@ -38,10 +49,9 @@ def randomPhoneNumber():
     num_start = ['134', '135', '136', '137', '138', '139', '150', '151', '152', '158', '159', '157', '182', '187',
                  '188',
                  '147', '130', '131', '132', '155', '156', '185', '186', '133', '153', '180', '189']
-
     start = random.choice(num_start)
     end = ''.join(random.sample(string.digits, 8))
-    res = start + end + '\n'
+    res = start + end
     return res
 
 
@@ -83,16 +93,16 @@ def restartDevice(deviceAttrList):
         return
     # set the device info
     randomManuFacturer = random.choice(list(mobileBrand))
-    modifyParamsStr = ldconsole + "modify --index %s --manufacturer %s --model %s --pnumber %s --resolution 480,320," \
-                                  "160 --cpu %s --memory %s" % (
-                          deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber(),
-                          deviceCpuNum,
-                          deviceMemoryNum)
+    modifyParamsStr = ldconsole + "modify --index %s --manufacturer %s --model %s --pnumber %s --resolution %s,%s,%s --cpu %s --memory %s" % (
+        deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber(),
+        resolutionModelList[resolutionModel]["x"],
+        resolutionModelList[resolutionModel]["y"], resolutionModelList[resolutionModel]["dpi"], deviceCpuNum,
+        deviceMemoryNum)
     subprocess.run(modifyParamsStr, timeout=5)
-    print("%s modifyDeviceParams!!!" % (deviceAttrList[1], modifyParamsStr), flush=True)
+    print("%s modifyDeviceParams!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
-    # subprocess.run(ldconsole + " globalsetting --fps 20 --audio 0  --fastplay 1 --cleanmode 1", timeout=5)
-    subprocess.run(ldconsole + " globalsetting --fps 10 --audio 0   --cleanmode 1", timeout=5)
+    subprocess.run(ldconsole + " globalsetting --fps %s --audio %s --fastplay %s --cleanmode %s" % (
+        deviceMaxFps, deviceAudio, deviceFastplay, deviceCleanmode), timeout=5)
     print("%s globalSetting!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
     # run device
@@ -458,6 +468,7 @@ def new():
                     continue
                 deviceAttrList = stringDevice.split(",")
                 # check device hardware
+                # eample:['0', '雷电模拟器', '2364406', '790452', '1', '24916', '17032']
                 if checkDeviceRunningHealth(deviceAttrList) is False:
                     restartDevice(deviceAttrList)
             print("sleepAt:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), flush=True)
