@@ -2,6 +2,7 @@
 import os
 import subprocess
 import time
+import datetime
 import random
 import string
 import win32con
@@ -9,31 +10,42 @@ import win32gui
 import randName
 import psutil
 import requests
+import configparser
+import json
 
-ldPath = "C:\ChangZhi\dnplayer2\\"
-ldconsole = ldPath + "ldconsole.exe "
-ld = ldPath + "ld.exe"
+cconfig = configparser.ConfigParser()
+
+
+def initConfig():
+    global cconfig
+    cconfig.read("config.ini", encoding='UTF-8')
+
+
+initConfig()
+ldPath = cconfig["cc"]["ldpath"]
+ldconsole = ldPath + cconfig["cc"]["ldconsole"]
+ld = ldPath + cconfig["cc"]['ld']
+backupAndRestorePath = ldPath + cconfig["cc"]['backupAndRestorePath']
 lastReconnectTime = time.time()
-noOpenList = ["laji"]
-checkPacFlag = False  # check device pac status,if need pac proxy so set true
-reconnectNet = False  # reconnect pc adsl
-showWindowFlag = True  # show device on the screen
-sortWndFlag = True  # adb sort the device
-limitMemory = 2048  # max limit memory
-limitCpu = 250
-limitDuration = 5000  # max lifetime
-deviceCpuNum = 2  # deivce init cpu num
-deviceMemoryNum = 2048  # device init memory num
-resolutionModelList = [{"x": "480", "y": "320", "dpi": "160"},
-                       {"x": "1334", "y": "750", "dpi": "320"}]  # recommend resolution list
-resolutionModel = 0  # select a resolutionModelList index
-deviceMaxFps = 15
-deviceAudio = 15  # 音频，打开=1，关闭=0
-deviceFastplay = 1  # 快速显示模式，打开=1，关闭=0
-deviceCleanmode = 1  # 干净模式，目测是去广告用的
-# 15、downcpu 网友吹牛逼，不知道实际作用。
-# downcpu <--name mnq_name | --index mnq_idx> --rate <0~100>
-# 本人的问道游戏测试，downcpu --index 0 --rate 50，效果很好！
+noOpenList = json.loads(cconfig["cc"]['noOpenList'])
+checkPacFlag = cconfig.getboolean("cc", "checkPacFlag")
+reconnectNet = cconfig.getboolean("cc", "reconnectNet")
+showWindowFlag = cconfig.getboolean("cc", "showWindowFlag")
+sortWndFlag = cconfig.getboolean("cc", "sortWndFlag")
+limitMemory = cconfig.getint("cc", "limitMemory")
+limitCpu = cconfig.getint("cc", "limitCpu")
+limitDuration = cconfig.getint("cc", "limitDuration")
+deviceCpuNum = cconfig.getint("cc", "deviceCpuNum")
+deviceMemoryNum = cconfig.getint("cc", "deviceMemoryNum")
+resolutionModelList = json.loads(cconfig["cc"]['resolutionModelList'])
+resolutionModel = cconfig.getint("cc", "resolutionModel")
+backupAndRestoreDateMap = json.loads(cconfig["cc"]['backupAndRestoreDateMap'])
+backupAndRestoreDateRecordMap = json.loads(cconfig["cc"]['backupAndRestoreDateRecordMap'])
+deviceMaxFps = cconfig.getint("cc", "deviceMaxFps")
+deviceAudio = cconfig.getint("cc", "deviceAudio")
+deviceFastplay = cconfig.getint("cc", "deviceFastplay")
+deviceCleanmode = cconfig.getint("cc", "deviceCleanmode")
+
 mobileBrand = {"xiaomi": ["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10", "benija", "somi"],
                "google": ["googlePixel2", "googlePixel3", "fancy", "tom", "jack", "karsa"],
                "huawei": ["huaweiHonorV9", "huaweiHonorV10", "P30", "timi", "jimmy", "vanilla", "knight"],
@@ -45,7 +57,6 @@ mobileBrand = {"xiaomi": ["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10", "benija",
 
 
 def randomPhoneNumber():
-    all_phone_nums = set()
     num_start = ['134', '135', '136', '137', '138', '139', '150', '151', '152', '158', '159', '157', '182', '187',
                  '188',
                  '147', '130', '131', '132', '155', '156', '185', '186', '133', '153', '180', '189']
@@ -91,9 +102,13 @@ def restartDevice(deviceAttrList):
     time.sleep(1)
     if checkDeviceRunning(deviceAttrList, "0") is False:
         return
+    # backup device
+    backupDevice(deviceAttrList)
+    # restore device
+    restoreDevice(deviceAttrList)
     # set the device info
     randomManuFacturer = random.choice(list(mobileBrand))
-    modifyParamsStr = ldconsole + "modify --index %s --manufacturer %s --model %s --pnumber %s --resolution %s,%s,%s --cpu %s --memory %s" % (
+    modifyParamsStr = ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution %s,%s,%s --cpu %s --memory %s" % (
         deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber(),
         resolutionModelList[resolutionModel]["x"],
         resolutionModelList[resolutionModel]["y"], resolutionModelList[resolutionModel]["dpi"], deviceCpuNum,
@@ -108,7 +123,7 @@ def restartDevice(deviceAttrList):
     # run device
     # subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]),
     #                timeout=5)
-    subprocess.run(ldconsole + "launch --index %s" % (deviceAttrList[0]), timeout=5)
+    subprocess.run(ldconsole + " launch --index %s" % (deviceAttrList[0]), timeout=5)
     print("%s runDeviceBegin!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
     deviceAttrList = getDeviceAttrList(deviceAttrList[0])
@@ -452,6 +467,71 @@ def getDeviceAttrList(deviceIndex):
     except Exception as e:
         print(e, flush=True)
         print("getDeviceAttrListFail", flush=True)
+        return False
+
+
+def backupDevice(deviceAttrList):
+    # assert weekday
+    nowWeekday = datetime.date.today().isoweekday()
+    if nowWeekday != backupAndRestoreDateMap["backup"]["week"]:
+        return
+    # assert hour
+    nowHour = datetime.datetime.now().hour
+    if nowHour < backupAndRestoreDateMap["backup"]["hour"]:
+        return
+    # assert backup yet
+    if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["backup"]:
+        print("%s in %s backupYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
+        return
+    try:
+        # begin backup
+        newBackupFile = "%s/%s.backup.ldbk" % (backupAndRestorePath, deviceAttrList[0])
+        print(newBackupFile + " beginBackup", flush=True)
+        subprocess.run(ldconsole + " backup --index %s --file %s" % (
+            deviceAttrList[0], newBackupFile), timeout=60)
+        # backup suc, remove old backup file
+        oldBackupFile = "%s/%s.ldbk" % (backupAndRestorePath, deviceAttrList[0])
+        if os.path.exists(oldBackupFile) == True:
+            # exist
+            os.remove(oldBackupFile)
+        os.rename(newBackupFile, oldBackupFile)
+        backupAndRestoreDateRecordMap["backup"][datetime.date.today().strftime("%Y-%m-%d")] = True
+        print("%s backupSuc!!!" % (deviceAttrList[1]), flush=True)
+        return True
+    except Exception as e:
+        print("backupFail", flush=True)
+        print(e, flush=True)
+        return False
+
+
+def restoreDevice(deviceAttrList):
+    # assert weekday
+    nowWeekday = datetime.date.today().isoweekday()
+    if nowWeekday != backupAndRestoreDateMap["restore"]["week"]:
+        return
+    # assert hour
+    nowHour = datetime.datetime.now().hour
+    if nowHour < backupAndRestoreDateMap["restore"]["hour"]:
+        return
+    # assert backup yet
+    if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["restore"]:
+        print("%s in %s restoreYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
+        return
+    try:
+        # begin restore
+        # check restore file exist
+        restoreFile = "%s/%s.ldbk" % (backupAndRestorePath, deviceAttrList[0])
+        print(restoreFile + " begin restore")
+        if os.path.exists(restoreFile) == False:
+            print("%s restoreFailNotExist!!!" % (restoreFile), flush=True)
+            return
+        subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=60)
+        backupAndRestoreDateRecordMap["restore"][datetime.date.today().strftime("%Y-%m-%d")] = True
+        print("%s restoreSuc!!!" % (deviceAttrList[1]), flush=True)
+        return True
+    except Exception as e:
+        print("restoreFail", flush=True)
+        print(e, flush=True)
         return False
 
 
