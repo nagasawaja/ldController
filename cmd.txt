@@ -1,1 +1,6 @@
+# sort the device windows
 C:\ChangZhi\dnplayer2\ldconsole.exe sortWnd
+# pull file from device
+F:/ChangZhi/dnplayer2/ldconsole.exe pull --index 0  --remote /sdcard/TouchSprite/log/ts.log --local F:/ChangZhi
+# push file to device
+F:/ChangZhi/dnplayer2/ldconsole.exe push --index 0  --remote /sdcard/TouchSprite/log --local F:/ChangZhi/1.txt
