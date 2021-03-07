@@ -471,6 +471,8 @@ def getDeviceAttrList(deviceIndex):
 
 
 def backupDevice(deviceAttrList):
+    if deviceAttrList[0] not in backupAndRestoreDateRecordMap["backup"]:
+        backupAndRestoreDateRecordMap['backup'][deviceAttrList[0]] = ''
     # assert weekday
     nowWeekday = datetime.date.today().isoweekday()
     if nowWeekday != backupAndRestoreDateMap["backup"]["week"]:
@@ -480,7 +482,7 @@ def backupDevice(deviceAttrList):
     if nowHour < backupAndRestoreDateMap["backup"]["hour"]:
         return
     # assert backup yet
-    if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["backup"]:
+    if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]]:
         print("%s in %s backupYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
         return
     try:
@@ -495,7 +497,7 @@ def backupDevice(deviceAttrList):
             # exist
             os.remove(oldBackupFile)
         os.rename(newBackupFile, oldBackupFile)
-        backupAndRestoreDateRecordMap["backup"][datetime.date.today().strftime("%Y-%m-%d")] = True
+        backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
         print("%s backupSuc!!!" % (deviceAttrList[1]), flush=True)
         return True
     except Exception as e:
