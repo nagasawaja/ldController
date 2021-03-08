@@ -472,7 +472,7 @@ def getDeviceAttrList(deviceIndex):
 
 def backupDevice(deviceAttrList):
     if deviceAttrList[0] not in backupAndRestoreDateRecordMap["backup"]:
-        backupAndRestoreDateRecordMap['backup'][deviceAttrList[0]] = ''
+        backupAndRestoreDateRecordMap['backup'][deviceAttrList[0]] = {}
     # assert weekday
     nowWeekday = datetime.date.today().isoweekday()
     if nowWeekday != backupAndRestoreDateMap["backup"]["week"]:
@@ -497,6 +497,11 @@ def backupDevice(deviceAttrList):
             # exist
             os.remove(oldBackupFile)
         os.rename(newBackupFile, oldBackupFile)
+        # write backup record to file cache
+        fWrite = open("backupRecord.txt", "w")
+        fWrite.write(str(backupAndRestoreDateRecordMap))
+        fWrite.close()
+        # suc and return true
         backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
         print("%s backupSuc!!!" % (deviceAttrList[1]), flush=True)
         return True
@@ -507,6 +512,8 @@ def backupDevice(deviceAttrList):
 
 
 def restoreDevice(deviceAttrList):
+    if deviceAttrList[0] not in backupAndRestoreDateRecordMap["restore"]:
+        backupAndRestoreDateRecordMap['restore'][deviceAttrList[0]] = {}
     # assert weekday
     nowWeekday = datetime.date.today().isoweekday()
     if nowWeekday != backupAndRestoreDateMap["restore"]["week"]:
@@ -516,7 +523,7 @@ def restoreDevice(deviceAttrList):
     if nowHour < backupAndRestoreDateMap["restore"]["hour"]:
         return
     # assert backup yet
-    if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["restore"]:
+    if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]]:
         print("%s in %s restoreYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
         return
     try:
@@ -528,7 +535,7 @@ def restoreDevice(deviceAttrList):
             print("%s restoreFailNotExist!!!" % (restoreFile), flush=True)
             return
         subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=60)
-        backupAndRestoreDateRecordMap["restore"][datetime.date.today().strftime("%Y-%m-%d")] = True
+        backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
         print("%s restoreSuc!!!" % (deviceAttrList[1]), flush=True)
         return True
     except Exception as e:
@@ -537,7 +544,18 @@ def restoreDevice(deviceAttrList):
         return False
 
 
+def loadBackupAndRestoreDateRecordMapFileCache():
+    fRead = open("backupRecord.txt", "r")
+    body = fRead.read(-1)
+    global backupAndRestoreDateRecordMap
+    backupAndRestoreDateRecordMap= eval(body)
+    fRead.close()
+    return
+
+
 def new():
+    # load backup cache
+    loadBackupAndRestoreDateRecordMapFileCache()
     while True:
         try:
             if reconnectNet is True:
