@@ -1,6 +1,10 @@
 # sort the device windows
-C:\ChangZhi\dnplayer2\ldconsole.exe sortWnd
+D:/ChangZhi/dnplayer2/ldconsole.exe sortWnd
 # pull file from device
-F:/ChangZhi/dnplayer2/ldconsole.exe pull --index 0  --remote /sdcard/TouchSprite/log/ts.log --local F:/ChangZhi
+D:/ChangZhi/dnplayer2/ldconsole.exe pull --index 0  --remote /sdcard/TouchSprite/log/ts.log --local F:/ChangZhi
 # push file to device
-F:/ChangZhi/dnplayer2/ldconsole.exe push --index 0  --remote /sdcard/TouchSprite/log --local F:/ChangZhi/1.txt
+D:/ChangZhi/dnplayer2/ldconsole.exe push --index 0  --remote /sdcard/TouchSprite/log --local F:/ChangZhi/1.txt
+# how to build
+pyinstaller -F -c -i mao.ico main.py
+# how to backup
+D:/ChangZhi/dnplayer2/ldconsole.exe backup --index 0 --file D:/vrGame/0.ldbk
