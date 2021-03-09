@@ -545,6 +545,8 @@ def restoreDevice(deviceAttrList):
 
 
 def loadBackupAndRestoreDateRecordMapFileCache():
+    if os.path.exists("backupRecord.txt") == False:
+        return
     fRead = open("backupRecord.txt", "r")
     body = fRead.read(-1)
     global backupAndRestoreDateRecordMap
