@@ -125,7 +125,7 @@ def restartDevice(deviceAttrList):
     #                timeout=5)
     subprocess.run(ldconsole + " launch --index %s" % (deviceAttrList[0]), timeout=5)
     print("%s runDeviceBegin!!!" % (deviceAttrList[1]), flush=True)
-    time.sleep(1)
+    time.sleep(5)
     deviceAttrList = getDeviceAttrList(deviceAttrList[0])
     if deviceAttrList is False:
         return
@@ -141,7 +141,7 @@ def restartDevice(deviceAttrList):
     print("%s runDeviceSuc!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(3)
     # mFocusedActivity => mResume，maybe different android version ，mResume is current mainActive
-    if checkCurrentActive(deviceAttrList, 20, "com.android.launcher3/.Launcher") is False:
+    if checkCurrentActive(deviceAttrList, 30, "com.android.launcher3/.Launcher") is False:
         print("%s cannotRunMainActive!!!" % (deviceAttrList[1]))
         return
     print("%s runMainActive!!!" % (deviceAttrList[1]))
@@ -149,7 +149,7 @@ def restartDevice(deviceAttrList):
     # run touchSprite
     subprocess.run(ldconsole + " runapp --index %s --packagename com.touchsprite.android" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
-    if checkCurrentActive(deviceAttrList, 10, "com.touchsprite.android/.activity.MainActivity") is False:
+    if checkCurrentActive(deviceAttrList, 25, "com.touchsprite.android/.activity.MainActivity") is False:
         print("%s cannotRunTouchSprite!!!" % (deviceAttrList[1]))
         return
     print("%s runTouchSprite!!!" % (deviceAttrList[1]))
