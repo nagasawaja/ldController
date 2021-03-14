@@ -149,7 +149,7 @@ def restartDevice(deviceAttrList):
     # run touchSprite
     subprocess.run(ldconsole + " runapp --index %s --packagename com.touchsprite.android" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
-    if checkCurrentActive(deviceAttrList, 25, "com.touchsprite.android/.activity.MainActivity") is False:
+    if checkCurrentActive(deviceAttrList, 35, "com.touchsprite.android/.activity.MainActivity") is False:
         print("%s cannotRunTouchSprite!!!" % (deviceAttrList[1]))
         return
     print("%s runTouchSprite!!!" % (deviceAttrList[1]))
@@ -157,19 +157,19 @@ def restartDevice(deviceAttrList):
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value home" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
     print("%s runHome!!!" % (deviceAttrList[1]))
-    if checkCurrentActive(deviceAttrList, 10, "com.android.launcher3/.Launcher") is False:
+    if checkCurrentActive(deviceAttrList, 15, "com.android.launcher3/.Launcher") is False:
         print("%s cannotRunMainActive2!!!" % (deviceAttrList[1]))
         return
     print("%s runMainActive2!!!" % (deviceAttrList[1]))
-    time.sleep(3)
-    if sortWndFlag is True:
-        subprocess.run(ldconsole + " sortWnd", timeout=5)
-        print("%s runSortWnd!!!" % (deviceAttrList[1]))
-        time.sleep(5)
+    time.sleep(5)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value volumedown" % (deviceAttrList[0]),
                    stdout=subprocess.PIPE, timeout=5)
     print("%s runScript!!!" % (deviceAttrList[1]))
-    time.sleep(2)
+    time.sleep(5)
+    if sortWndFlag is True:
+        subprocess.run(ldconsole + " sortWnd", timeout=10)
+        print("%s runSortWnd!!!" % (deviceAttrList[1]))
+        time.sleep(5)
 
 
 def checkCurrentActive(deviceAttrList, retryTimes, activeName):
