@@ -70,7 +70,7 @@ def checkDeviceRunning(deviceAttrList, runningStatus):
     try:
         for i in range(1, 40):
             # check device alive
-            procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
+            procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
             time.sleep(1)
             if str(procList.stdout.splitlines()[int(deviceAttrList[0])], encoding="gbk").split(",")[4] == runningStatus:
                 return True
@@ -94,7 +94,7 @@ def hideDeviceWindow(deviceAttrList):
 
 def restartDevice(deviceAttrList):
     # running
-    subprocess.run(ldconsole + " quit --index %s" % (deviceAttrList[0]), timeout=5)
+    subprocess.run(ldconsole + " quit --index %s" % (deviceAttrList[0]), timeout=10)
     print("%s deviceQuit!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
     if killAllRelativeProcess(int(deviceAttrList[6]), int(deviceAttrList[5])) is False:
@@ -102,10 +102,6 @@ def restartDevice(deviceAttrList):
     time.sleep(1)
     if checkDeviceRunning(deviceAttrList, "0") is False:
         return
-    # backup device
-    backupDevice(deviceAttrList)
-    # restore device
-    restoreDevice(deviceAttrList)
     # set the device info
     randomManuFacturer = random.choice(list(mobileBrand))
     modifyParamsStr = ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution %s,%s,%s --cpu %s --memory %s" % (
@@ -113,17 +109,17 @@ def restartDevice(deviceAttrList):
         resolutionModelList[resolutionModel]["x"],
         resolutionModelList[resolutionModel]["y"], resolutionModelList[resolutionModel]["dpi"], deviceCpuNum,
         deviceMemoryNum)
-    subprocess.run(modifyParamsStr, timeout=5)
+    subprocess.run(modifyParamsStr, timeout=10)
     print("%s modifyDeviceParams!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
     subprocess.run(ldconsole + " globalsetting --fps %s --audio %s --fastplay %s --cleanmode %s" % (
-        deviceMaxFps, deviceAudio, deviceFastplay, deviceCleanmode), timeout=5)
+        deviceMaxFps, deviceAudio, deviceFastplay, deviceCleanmode), timeout=10)
     print("%s globalSetting!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(1)
     # run device
     # subprocess.run(ldconsole + " launchex --index %s --packagename \"com.touchsprite.android\"" % (deviceAttrList[0]),
-    #                timeout=5)
-    subprocess.run(ldconsole + " launch --index %s" % (deviceAttrList[0]), timeout=5)
+    #                timeout=10)
+    subprocess.run(ldconsole + " launch --index %s" % (deviceAttrList[0]), timeout=10)
     print("%s runDeviceBegin!!!" % (deviceAttrList[1]), flush=True)
     time.sleep(5)
     deviceAttrList = getDeviceAttrList(deviceAttrList[0])
@@ -148,14 +144,14 @@ def restartDevice(deviceAttrList):
     time.sleep(3)
     # run touchSprite
     subprocess.run(ldconsole + " runapp --index %s --packagename com.touchsprite.android" % (deviceAttrList[0]),
-                   stdout=subprocess.PIPE, timeout=5)
+                   stdout=subprocess.PIPE, timeout=10)
     if checkCurrentActive(deviceAttrList, 35, "com.touchsprite.android/.activity.MainActivity") is False:
         print("%s cannotRunTouchSprite!!!" % (deviceAttrList[1]))
         return
     print("%s runTouchSprite!!!" % (deviceAttrList[1]))
     time.sleep(3)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value home" % (deviceAttrList[0]),
-                   stdout=subprocess.PIPE, timeout=5)
+                   stdout=subprocess.PIPE, timeout=10)
     print("%s runHome!!!" % (deviceAttrList[1]))
     if checkCurrentActive(deviceAttrList, 15, "com.android.launcher3/.Launcher") is False:
         print("%s cannotRunMainActive2!!!" % (deviceAttrList[1]))
@@ -163,7 +159,7 @@ def restartDevice(deviceAttrList):
     print("%s runMainActive2!!!" % (deviceAttrList[1]))
     time.sleep(5)
     subprocess.run(ldconsole + " action --index %s --key call.keyboard --value volumedown" % (deviceAttrList[0]),
-                   stdout=subprocess.PIPE, timeout=5)
+                   stdout=subprocess.PIPE, timeout=10)
     print("%s runScript!!!" % (deviceAttrList[1]))
     time.sleep(5)
     if sortWndFlag is True:
@@ -240,11 +236,11 @@ def checkHookApp(deviceAttrList):
     try:
         id5HookStatus = subprocess.run(
             ld + " -s %s adb shell \" ps | grep com.example.id5hook\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         id5HookStatus2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.example.id5hook\"" % (
                 deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         id5HookPsList = id5HookStatus.stdout.splitlines()
         id5HookPsList2 = id5HookStatus2.stdout.splitlines()
         for l in id5HookPsList:
@@ -267,11 +263,11 @@ def killLeiDianGameCenter(deviceAttrList):
     try:
         leiDianGameCenterCmd = subprocess.run(
             ld + " -s %s adb shell \" ps | grep com.android.flysilkworm\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         leiDianGameCenterCmd2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.android.flysilkworm\"" % (
                 deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         leiDianGameCenterPsList = leiDianGameCenterCmd.stdout.splitlines()
         leiDianGameCenterPsList2 = leiDianGameCenterCmd2.stdout.splitlines()
         for l in leiDianGameCenterPsList:
@@ -279,7 +275,7 @@ def killLeiDianGameCenter(deviceAttrList):
                 print("%s killLeiDianGameCenter" % (deviceAttrList[1]), flush=True)
                 subprocess.run(
                     ld + " -s %s adb shell \" kill -9 %s\"" % (deviceAttrList[0], l.split()[1].decode('utf-8')),
-                    stdout=subprocess.PIPE, timeout=5)
+                    stdout=subprocess.PIPE, timeout=10)
                 return True
         for l in leiDianGameCenterPsList2:
             if "com.android.flysilkworm" in str(l, encoding="gbk"):
@@ -287,7 +283,7 @@ def killLeiDianGameCenter(deviceAttrList):
                 subprocess.run(
                     ldconsole + " adb --index %s --command \"shell kill -9 %s\"" % (
                         deviceAttrList[0], l.split()[1].decode('utf-8')),
-                    stdout=subprocess.PIPE, timeout=5)
+                    stdout=subprocess.PIPE, timeout=10)
                 return True
 
     except Exception as e:
@@ -300,11 +296,11 @@ def checkTouchSprite(deviceAttrList):
     try:
         touchspriteCmd = subprocess.run(
             ld + " -s %s adb shell \" ps | grep com.touchsprite.android\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         touchspriteCmd2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.touchsprite.android\"" % (
                 deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         touchspritePsList = touchspriteCmd.stdout.splitlines()
         touchspritePsList2 = touchspriteCmd2.stdout.splitlines()
         for l in touchspritePsList:
@@ -330,11 +326,11 @@ def checkPac(deviceAttrList):
     try:
         id5HookStatus = subprocess.run(
             ld + " -s %s adb shell \" ps | grep com.android.pacprocessor\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         id5HookStatus2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.android.pacprocessor\"" % (
                 deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=5)
+            stdout=subprocess.PIPE, timeout=10)
         id5HookPsList = id5HookStatus.stdout.splitlines()
         id5HookPsList2 = id5HookStatus2.stdout.splitlines()
         for l in id5HookPsList:
@@ -458,7 +454,7 @@ def killAllRelativeProcess(ldBoxPid, dnPlayerPid):
 
 def getDeviceAttrList(deviceIndex):
     try:
-        procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
+        procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
         for byteDevice in procList.stdout.splitlines():
             stringDevice = str(byteDevice, encoding="gbk")
             deviceAttrList = stringDevice.split(",")
@@ -485,30 +481,43 @@ def backupDevice(deviceAttrList):
     if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]]:
         print("%s in %s backupYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
         return
-    try:
-        # begin backup
-        newBackupFile = "%s/%s.backup.ldbk" % (backupAndRestorePath, deviceAttrList[0])
-        print(newBackupFile + " beginBackup", flush=True)
-        subprocess.run(ldconsole + " backup --index %s --file %s" % (
-            deviceAttrList[0], newBackupFile), timeout=60)
-        # backup suc, remove old backup file
-        oldBackupFile = "%s/%s.ldbk" % (backupAndRestorePath, deviceAttrList[0])
-        if os.path.exists(oldBackupFile) == True:
-            # exist
-            os.remove(oldBackupFile)
-        os.rename(newBackupFile, oldBackupFile)
-        # write backup record to file cache
-        fWrite = open("backupRecord.txt", "w")
-        fWrite.write(str(backupAndRestoreDateRecordMap))
-        fWrite.close()
-        # suc and return true
-        backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
-        print("%s backupSuc!!!" % (deviceAttrList[1]), flush=True)
-        return True
-    except Exception as e:
-        print("backupFail", flush=True)
-        print(e, flush=True)
-        return False
+    # quit all device
+    print("restore quit all device and sleep 20s!!!", flush=True)
+    subprocess.run(ldconsole + " quitall", timeout=10)
+    # wait device actually exit
+    time.sleep(20)
+    procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
+    for byteDevice in procList.stdout.splitlines():
+        stringDevice = str(byteDevice, encoding="gbk")
+        if checkExistNoOpenList(stringDevice) is True:
+            # no handle this device that name exist in noOpenList
+            continue
+        deviceAttrList = stringDevice.split(",")
+        try:
+            # begin backup
+            newBackupFile = "%s/%s.backup.ldbk" % (backupAndRestorePath, deviceAttrList[0])
+            print(newBackupFile + " beginBackup", flush=True)
+            subprocess.run(ldconsole + " backup --index %s --file %s" % (
+                deviceAttrList[0], newBackupFile), timeout=100)
+            # backup suc, remove old backup file
+            oldBackupFile = "%s/%s.ldbk" % (backupAndRestorePath, deviceAttrList[0])
+            if os.path.exists(oldBackupFile) == True:
+                # exist
+                os.remove(oldBackupFile)
+            os.rename(newBackupFile, oldBackupFile)
+            # write backup record to file cache
+            fWrite = open("backupRecord.txt", "w")
+            fWrite.write(str(backupAndRestoreDateRecordMap))
+            fWrite.close()
+            # suc and return true
+            backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
+            print("%s backupSuc!!!" % (deviceAttrList[1]), flush=True)
+        except Exception as e:
+            print("backupFail", flush=True)
+            print(e, flush=True)
+            time.sleep(120)
+            return False
+    return "restart"
 
 
 def restoreDevice(deviceAttrList):
@@ -526,23 +535,35 @@ def restoreDevice(deviceAttrList):
     if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]]:
         print("%s in %s restoreYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
         return
-    try:
-        # begin restore
-        # check restore file exist
-        restoreFile = "%s/%s.ldbk" % (backupAndRestorePath, deviceAttrList[0])
-        print(restoreFile + " begin restore")
-        if os.path.exists(restoreFile) == False:
-            print("%s restoreFailNotExist!!!" % (restoreFile), flush=True)
-            return
-        subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=60)
-        backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
-        print("%s restoreSuc!!!" % (deviceAttrList[1]), flush=True)
-        return True
-    except Exception as e:
-        print("restoreFail", flush=True)
-        print(e, flush=True)
-        return False
-
+    # quit all device
+    print("restore quit all device and sleep 20s!!!", flush=True)
+    subprocess.run(ldconsole + " quitall", timeout=10)
+    # wait device actually exit
+    time.sleep(20)
+    procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
+    for byteDevice in procList.stdout.splitlines():
+        stringDevice = str(byteDevice, encoding="gbk")
+        if checkExistNoOpenList(stringDevice) is True:
+            # no handle this device that name exist in noOpenList
+            continue
+        deviceAttrList = stringDevice.split(",")
+        try:
+            # begin restore
+            # check restore file exist
+            restoreFile = "%s/%s.ldbk" % (backupAndRestorePath, deviceAttrList[0])
+            print(restoreFile + " begin restore")
+            if os.path.exists(restoreFile) == False:
+                print("%s restoreFailNotExist!!!" % (restoreFile), flush=True)
+                continue
+            subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=100)
+            backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
+            print("%s restoreSuc!!!" % (deviceAttrList[1]), flush=True)
+        except Exception as e:
+            print("restoreFail", flush=True)
+            print(e, flush=True)
+            time.sleep(120)
+            return False
+    return "restart"
 
 def loadBackupAndRestoreDateRecordMapFileCache():
     if os.path.exists("backupRecord.txt") == False:
@@ -562,13 +583,19 @@ def new():
         try:
             if reconnectNet is True:
                 checkNetWork()
-            procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=5)
+            procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
             for byteDevice in procList.stdout.splitlines():
                 stringDevice = str(byteDevice, encoding="gbk")
                 if checkExistNoOpenList(stringDevice) is True:
                     # no handle this device that name exist in noOpenList
                     continue
                 deviceAttrList = stringDevice.split(",")
+                # backup device
+                if backupDevice(deviceAttrList) == "restart":
+                    break
+                # restore device
+                if restoreDevice(deviceAttrList) == "restart":
+                    break
                 # check device hardware
                 # eample:['0', '雷电模拟器', '2364406', '790452', '1', '24916', '17032']
                 if checkDeviceRunningHealth(deviceAttrList) is False:
