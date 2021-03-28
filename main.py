@@ -45,6 +45,8 @@ deviceMaxFps = cconfig.getint("cc", "deviceMaxFps")
 deviceAudio = cconfig.getint("cc", "deviceAudio")
 deviceFastplay = cconfig.getint("cc", "deviceFastplay")
 deviceCleanmode = cconfig.getint("cc", "deviceCleanmode")
+checkCurrentFocusList = json.loads(cconfig["cc"]["checkCurrentFocusList"])
+checkAppRunningList = json.loads(cconfig["cc"]["checkAppRunningList"])
 
 mobileBrand = {"xiaomi": ["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10", "benija", "somi"],
                "google": ["googlePixel2", "googlePixel3", "fancy", "tom", "jack", "karsa"],
@@ -232,31 +234,58 @@ def reconnectNetwork():
         print(e, flush=True)
 
 
-def checkHookApp(deviceAttrList):
-    try:
-        id5HookStatus = subprocess.run(
-            ld + " -s %s adb shell \" ps | grep com.example.id5hook\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=10)
-        id5HookStatus2 = subprocess.run(
-            ldconsole + " adb --index %s --command \"shell ps | grep com.example.id5hook\"" % (
-                deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=10)
-        id5HookPsList = id5HookStatus.stdout.splitlines()
-        id5HookPsList2 = id5HookStatus2.stdout.splitlines()
-        for l in id5HookPsList:
-            if "com.example.id5hook" in str(l, encoding="gbk"):
-                # print("%s hookAppSuc" % (deviceAttrList[1]), flush=True)
-                return True
-        for l in id5HookPsList2:
-            if "com.example.id5hook" in str(l, encoding="gbk"):
-                # print("%s hookAppSuc" % (deviceAttrList[1]), flush=True)
-                return True
+def checkAppRunning(deviceAttrList):
+    for key, in checkAppRunningList:
+        try:
+            appRunningCmd = subprocess.run(
+                ld + " -s %s adb shell \" ps | grep %s\"" % (deviceAttrList[0], checkAppRunningList[key]),
+                stdout=subprocess.PIPE, timeout=10)
+            appRunningCmd2 = subprocess.run(
+                ldconsole + " adb --index %s --command \"shell ps | grep %s\"" % (
+                    deviceAttrList[0], checkAppRunningList[key]),
+                stdout=subprocess.PIPE, timeout=10)
+            appRunningPsList = appRunningCmd.stdout.splitlines()
+            appRunningPsList2 = appRunningCmd2.stdout.splitlines()
+            for l in appRunningPsList:
+                if checkAppRunningList[key] in str(l, encoding="gbk"):
+                    return True
+            for l in appRunningPsList2:
+                if checkAppRunningList[key] in str(l, encoding="gbk"):
+                    return True
+            print("%s %s not running" % (deviceAttrList[1], checkAppRunningList[key]), flush=True)
+            return False
+        except Exception as e:
+            print("checkAppRunning except exception", flush=True)
+            print(e, flush=True)
+            return False
 
-        return False
-    except Exception as e:
-        print("checkHookAppFail", flush=True)
-        print(e, flush=True)
-        return False
+
+def checkCurrentFocus(deviceAttrList):
+    for checkCurrentFocusName in checkCurrentFocusList:
+        try:
+            for retryTimes in range(checkCurrentFocusList[checkCurrentFocusName]['retryTimes']):
+                currentFocusCmd = subprocess.run(
+                    ld + " -s %s adb shell \" dumpsys window windows | grep 'mCurrentFocus'\"",
+                    stdout=subprocess.PIPE, timeout=10)
+                currentFocusCmd2 = subprocess.run(
+                    ldconsole + " adb --index %s --command \"shell dumpsys window windows | grep 'mCurrentFocus'\"",
+                    stdout=subprocess.PIPE, timeout=10)
+                currentFocusPsList = currentFocusCmd.stdout.splitlines()
+                currentFocusPsList2 = currentFocusCmd2.stdout.splitlines()
+                for l in currentFocusPsList:
+                    if checkCurrentFocusName in str(l, encoding="gbk"):
+                        return True
+                for l in currentFocusPsList2:
+                    if checkCurrentFocusName in str(l, encoding="gbk"):
+                        return True
+                print("%s %s is not focus, retryTimes:%s" % (deviceAttrList[1], checkCurrentFocusName, retryTimes),
+                      flush=True)
+                time.sleep(1)
+            return False
+        except Exception as e:
+            print("checkCurrentFocus except exception", flush=True)
+            print(e, flush=True)
+            return False
 
 
 def killLeiDianGameCenter(deviceAttrList):
@@ -288,34 +317,6 @@ def killLeiDianGameCenter(deviceAttrList):
 
     except Exception as e:
         print("killLeiDianGameCenterFail", flush=True)
-        print(e, flush=True)
-        return False
-
-
-def checkTouchSprite(deviceAttrList):
-    try:
-        touchspriteCmd = subprocess.run(
-            ld + " -s %s adb shell \" ps | grep com.touchsprite.android\"" % (deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=10)
-        touchspriteCmd2 = subprocess.run(
-            ldconsole + " adb --index %s --command \"shell ps | grep com.touchsprite.android\"" % (
-                deviceAttrList[0]),
-            stdout=subprocess.PIPE, timeout=10)
-        touchspritePsList = touchspriteCmd.stdout.splitlines()
-        touchspritePsList2 = touchspriteCmd2.stdout.splitlines()
-        for l in touchspritePsList:
-            if "com.touchsprite.android" in str(l, encoding="gbk"):
-                # print("%s touchspriteSuc" % (deviceAttrList[1]), flush=True)
-                return True
-        for l in touchspritePsList2:
-            if "com.touchsprite.android" in str(l, encoding="gbk"):
-                # print("%s touchspriteSuc2" % (deviceAttrList[1]), flush=True)
-                return True
-
-        print("%s touchspriteFail" % (deviceAttrList[1]), flush=True)
-        return False
-    except Exception as e:
-        print("touchspriteFail2", flush=True)
         print(e, flush=True)
         return False
 
@@ -362,15 +363,16 @@ def checkDeviceRunningHealth(deviceAttrList):
     ldBoxPid = int(deviceAttrList[6])
     runningStatus = deviceAttrList[4]
     try:
+        # check device running status
         if runningStatus != "1":
             return False
-        # check pid exists
+        # check device pid exists...device display
         if psutil.pid_exists(dnplayerPid) is False:
-            print("%s dnplayerPid not exist" % (deviceAttrList[1]), flush=True)
+            print("%s dnplayerPid device display not exist" % (deviceAttrList[1]), flush=True)
             return False
-
+        # check divce pid exists...device service
         if psutil.pid_exists(ldBoxPid) is False:
-            print("%s ldboxPid not exist" % (deviceAttrList[1]), flush=True)
+            print("%s ldboxPid device service not exist" % (deviceAttrList[1]), flush=True)
             return False
         # check memory
         if (psutil.Process(dnplayerPid).memory_info().rss + psutil.Process(
@@ -407,17 +409,17 @@ def checkDeviceRunningHealth(deviceAttrList):
                                                                    time.strftime("%Y-%m-%d %H:%M:%S",
                                                                                  time.localtime())), flush=True)
             return False
-        # check hook app
-        if checkHookApp(deviceAttrList) is False:
-            print("%s checkHookApp Fail" % (deviceAttrList[1]), flush=True)
+        # check app running
+        if checkAppRunning(deviceAttrList) is False:
+            print("%s check app running Fail" % (deviceAttrList[1]), flush=True)
+            return False
+        # check current focus
+        if checkCurrentFocus(deviceAttrList) is False:
+            print("%s check current focus Fail" % (deviceAttrList[1]), flush=True)
             return False
         # check Pac
         if checkPacFlag == True and checkPac(deviceAttrList) == False:
             print("%s checkPacFlag Fail" % (deviceAttrList[1]), flush=True)
-            return False
-        # check touchSprite
-        if checkTouchSprite(deviceAttrList) is False:
-            print("%s checkTouchSprite Fail" % (deviceAttrList[1]), flush=True)
             return False
         return True
     except Exception as e:
@@ -510,7 +512,8 @@ def backupDevice(deviceAttrList):
             fWrite.write(str(backupAndRestoreDateRecordMap))
             fWrite.close()
             # suc and return true
-            backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
+            backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][
+                datetime.date.today().strftime("%Y-%m-%d")] = True
             print("%s backupSuc!!!" % (deviceAttrList[1]), flush=True)
         except Exception as e:
             print("backupFail", flush=True)
@@ -556,7 +559,8 @@ def restoreDevice(deviceAttrList):
                 print("%s restoreFailNotExist!!!" % (restoreFile), flush=True)
                 continue
             subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=100)
-            backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]][datetime.date.today().strftime("%Y-%m-%d")] = True
+            backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]][
+                datetime.date.today().strftime("%Y-%m-%d")] = True
             print("%s restoreSuc!!!" % (deviceAttrList[1]), flush=True)
         except Exception as e:
             print("restoreFail", flush=True)
@@ -565,13 +569,14 @@ def restoreDevice(deviceAttrList):
             return False
     return "restart"
 
+
 def loadBackupAndRestoreDateRecordMapFileCache():
     if os.path.exists("backupRecord.txt") == False:
         return
     fRead = open("backupRecord.txt", "r")
     body = fRead.read(-1)
     global backupAndRestoreDateRecordMap
-    backupAndRestoreDateRecordMap= eval(body)
+    backupAndRestoreDateRecordMap = eval(body)
     fRead.close()
     return
 
