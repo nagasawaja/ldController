@@ -235,24 +235,24 @@ def reconnectNetwork():
 
 
 def checkAppRunning(deviceAttrList):
-    for key, in checkAppRunningList:
+    for appName in checkAppRunningList:
         try:
             appRunningCmd = subprocess.run(
-                ld + " -s %s adb shell \" ps | grep %s\"" % (deviceAttrList[0], checkAppRunningList[key]),
+                ld + " -s %s adb shell \" ps | grep %s\"" % (deviceAttrList[0], appName),
                 stdout=subprocess.PIPE, timeout=10)
             appRunningCmd2 = subprocess.run(
                 ldconsole + " adb --index %s --command \"shell ps | grep %s\"" % (
-                    deviceAttrList[0], checkAppRunningList[key]),
+                    deviceAttrList[0], appName),
                 stdout=subprocess.PIPE, timeout=10)
             appRunningPsList = appRunningCmd.stdout.splitlines()
             appRunningPsList2 = appRunningCmd2.stdout.splitlines()
             for l in appRunningPsList:
-                if checkAppRunningList[key] in str(l, encoding="gbk"):
+                if appName in str(l, encoding="gbk"):
                     return True
             for l in appRunningPsList2:
-                if checkAppRunningList[key] in str(l, encoding="gbk"):
+                if appName in str(l, encoding="gbk"):
                     return True
-            print("%s %s not running" % (deviceAttrList[1], checkAppRunningList[key]), flush=True)
+            print("%s %s not running" % (deviceAttrList[1], appName), flush=True)
             return False
         except Exception as e:
             print("checkAppRunning except exception", flush=True)
