@@ -1,6 +1,10 @@
 # -- coding: utf-8 --
+import ctypes
+import inspect
 import os
 import subprocess
+import sys
+import threading
 import time
 import datetime
 import random
@@ -12,11 +16,14 @@ import psutil
 import requests
 import configparser
 import json
+import tkinter
+import zipfile
 
 cconfig = configparser.ConfigParser()
 
 
 def initConfig():
+    print('a')
     global cconfig
     cconfig.read("config.ini", encoding='UTF-8')
 
@@ -47,6 +54,9 @@ deviceFastplay = cconfig.getint("cc", "deviceFastplay")
 deviceCleanmode = cconfig.getint("cc", "deviceCleanmode")
 checkCurrentFocusList = json.loads(cconfig["cc"]["checkCurrentFocusList"])
 checkAppRunningList = json.loads(cconfig["cc"]["checkAppRunningList"])
+currentVersion = cconfig["cc"]["currentVersion"]
+checkVersionUrl = cconfig["cc"]["checkVersionUrl"]
+downloadLatestVersionUrl = cconfig["cc"]["downloadLatestVersionUrl"]
 
 mobileBrand = {"xiaomi": ["xiaomi6", "xiaomi8", "xiaomi9", "xiaomi10", "benija", "somi"],
                "google": ["googlePixel2", "googlePixel3", "fancy", "tom", "jack", "karsa"],
@@ -87,6 +97,7 @@ def checkDeviceRunning(deviceAttrList, runningStatus):
 def hideDeviceWindow(deviceAttrList):
     try:
         win32gui.ShowWindow(int(deviceAttrList[2]), win32con.SW_MINIMIZE)
+        print("hide device windows suc")
         return True
     except Exception as e:
         print("showDeviceWindowFail", flush=True)
@@ -580,6 +591,91 @@ def loadBackupAndRestoreDateRecordMapFileCache():
     fRead.close()
     return
 
+class KillableThread(threading.Thread):
+    def __init__(self, *args, **kw):
+        super(KillableThread, self).__init__(*args, **kw)
+
+    def _async_raise(tid, exctype):
+        """raises the exception, performs cleanup if needed"""
+        tid = ctypes.c_long(tid)
+        if not inspect.isclass(exctype):
+            exctype = type(exctype)
+        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
+        if res == 0:
+            raise ValueError("invalid thread id")
+        elif res != 1:
+            # """if it returns a number greater than one, you're in trouble,
+            # and you should call it again with exc=NULL to revert the effect"""
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
+            raise SystemError("PyThreadState_SetAsyncExc failed")
+    def kill(self):
+        KillableThread._async_raise(self.ident, SystemExit)
+
+
+startDeviceMonitoringThread = KillableThread()
+def threadIt(func, *args):
+    global startDeviceMonitoringThread
+    startDeviceMonitoringThread = KillableThread(target=func)
+    startDeviceMonitoringThread.start()
+
+
+def quitAllDevice():
+    try:
+        subprocess.run(ldconsole + " quitall", timeout=10)
+        print("quit all device suc")
+    except Exception as e:
+        print("quit all device fail")
+        print(e)
+
+
+def stopDeviceMonitoring():
+    try:
+        startDeviceMonitoringThread.kill()
+        print("stop device monitoring suc")
+    except Exception as e:
+        print("quit all device fail")
+        print(e)
+
+
+def sortDevice():
+    try:
+        subprocess.run(ldconsole + " sortWnd", timeout=10)
+        print("sort device suc")
+    except Exception as e:
+        print("sort device exception")
+        print(e)
+
+
+def checkAndDownloadRelativeVersion():
+    try:
+        responseObject = requests.post(checkVersionUrl)
+        responseJson = responseObject.json()
+        print("latest version:" + responseJson["androidDeviceMonitoringVersion"] + ";current version:" + currentVersion)
+        if responseJson["androidDeviceMonitoringVersion"] > currentVersion:
+            print("need update")
+            # download latest and unzip
+            r = requests.get(downloadLatestVersionUrl)
+            with open("demo3.zip", "wb") as code:
+                code.write(r.content)
+            zipFile = zipfile.ZipFile(file="demo3.zip")
+            for names in zipFile.namelist():
+                zipFile.extract(names, "./")
+    except Exception as e:
+        print("check and download relative version exception")
+        print(e)
+
+
+def restartProgram():
+    try:
+        python = sys.executable
+        os.execl(python, python, * sys.argv)
+        print("restart program suc")
+    except Exception as e:
+        print("restart program exception")
+        print(e)
+
+def hideDevice():
+
 
 def new():
     # load backup cache
@@ -611,4 +707,39 @@ def new():
             print(e)
 
 
-new()
+def tk():
+    top = tkinter.Tk()
+    # top.configure(background="black")
+    top.geometry("1000x1080")
+    bg = tkinter.PhotoImage(file = "33.gif")
+    # Create Canvas
+    canvas1 = tkinter.Canvas(top, width=1000,height=1080)
+    canvas1.pack(fill="both", expand=True)
+    # Display image
+    canvas1.create_image(0, 0, image=bg,anchor="nw")
+    # start device monitoring
+    startDeviceButton = tkinter.Button(top, text="START DEVICE MONITORING", command=lambda :threadIt(new),activeforeground="green",  highlightcolor="green")
+    canvas1.create_window(0, 0, anchor="nw", window=startDeviceButton)
+    # sort device
+    sortDeviceButton = tkinter.Button(top, text="SORT DEVICE", command= sortDevice, activeforeground="green",  highlightcolor="green")
+    canvas1.create_window(0, 50, anchor="nw", window=sortDeviceButton)
+    # quit all device
+    quitAllDeviceButton = tkinter.Button(top, text="QUIT ALL DEVICE", command= quitAllDevice, activeforeground="green", highlightcolor="green")
+    canvas1.create_window(0, 100, anchor="nw", window=quitAllDeviceButton)
+    # stop device monitoring
+    quitAllDeviceButton = tkinter.Button(top, text="STOP DEVICE MONITORING", command= stopDeviceMonitoring,  activeforeground="green",highlightcolor="green")
+    canvas1.create_window(0, 150, anchor="nw", window=quitAllDeviceButton)
+    # check and download relative version
+    checkAndDownloadRelativeVersionButton = tkinter.Button(top, text="CHECK AND DOWNLOAD RELATIVE VERSION", command= checkAndDownloadRelativeVersion, activeforeground="green",  highlightcolor="green")
+    canvas1.create_window(0, 200, anchor="nw", window=checkAndDownloadRelativeVersionButton)
+    # hide device
+    hideDeviceButton = tkinter.Button(top, text="HIDE DEVICE", command= hideDevice, activeforeground="green",  highlightcolor="green")
+    canvas1.create_window(0, 200, anchor="nw", window=hideDevice)
+    # restart program
+    restartProgramButton = tkinter.Button(top, text="RESTART PROGRAM", command= restartProgram, activeforeground="green",  highlightcolor="green")
+    canvas1.create_window(0, 250, anchor="nw", window=restartProgramButton)
+    # run
+    top.mainloop()
+
+
+tk()
