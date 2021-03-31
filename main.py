@@ -391,9 +391,11 @@ def checkDeviceRunningHealth(deviceAttrList):
                 ldBoxPid).memory_info().rss) / 1024 / 1024, limitMemory), flush=True)
             return False
         # check cpu...
-        cpuPercent = psutil.Process(ldBoxPid).cpu_percent(interval=1)
-        if cpuPercent >= limitCpu:
-            print("%s cpuPercent over %d" % (deviceAttrList[1], limitCpu), flush=True)
+        currentCpuPercent = 0
+        currentCpuPercent = currentCpuPercent + psutil.Process(ldBoxPid).cpu_percent(interval=2) / psutil.cpu_count(logical=True)
+        currentCpuPercent = currentCpuPercent + psutil.Process(dnplayerPid).cpu_percent(interval=2) / psutil.cpu_count(logical=True)
+        if currentCpuPercent >= limitCpu:
+            print("%s cpuPercent over %d; current cpu percent: %d" % (deviceAttrList[1], limitCpu, currentCpuPercent), flush=True)
             return False
         # check alive duration
         if int(psutil.Process(dnplayerPid).create_time()) + limitDuration <= int(time.time()):
