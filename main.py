@@ -23,7 +23,6 @@ cconfig = configparser.ConfigParser()
 
 
 def initConfig():
-    print('a')
     global cconfig
     cconfig.read("config.ini", encoding='UTF-8')
 
@@ -97,7 +96,6 @@ def checkDeviceRunning(deviceAttrList, runningStatus):
 def hideDeviceWindow(deviceAttrList):
     try:
         win32gui.ShowWindow(int(deviceAttrList[2]), win32con.SW_MINIMIZE)
-        print("hide device windows suc")
         return True
     except Exception as e:
         print("showDeviceWindowFail", flush=True)
@@ -655,11 +653,12 @@ def checkAndDownloadRelativeVersion():
             print("need update")
             # download latest and unzip
             r = requests.get(downloadLatestVersionUrl)
-            with open("demo3.zip", "wb") as code:
+            with open("ldController.zip", "wb") as code:
                 code.write(r.content)
-            zipFile = zipfile.ZipFile(file="demo3.zip")
+            zipFile = zipfile.ZipFile(file="ldController.zip")
             for names in zipFile.namelist():
                 zipFile.extract(names, "./")
+            print("unzip relative version suc")
     except Exception as e:
         print("check and download relative version exception")
         print(e)
@@ -674,7 +673,18 @@ def restartProgram():
         print("restart program exception")
         print(e)
 
+
 def hideDevice():
+    try:
+        procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
+        for byteDevice in procList.stdout.splitlines():
+            stringDevice = str(byteDevice, encoding="gbk")
+            deviceAttrList = stringDevice.split(",")
+            print("%s hideDevice!!!" % (deviceAttrList[1]), flush=True)
+            hideDeviceWindow(deviceAttrList)
+    except Exception as e:
+        print("hide device exception")
+        print(e)
 
 
 def new():
@@ -729,15 +739,15 @@ def tk():
     # stop device monitoring
     quitAllDeviceButton = tkinter.Button(top, text="STOP DEVICE MONITORING", command= stopDeviceMonitoring,  activeforeground="green",highlightcolor="green")
     canvas1.create_window(0, 150, anchor="nw", window=quitAllDeviceButton)
+    # hide device
+    hideDeviceButton = tkinter.Button(top, text="HIDE DEVICE", command= hideDevice, activeforeground="green",  highlightcolor="green")
+    canvas1.create_window(0, 250, anchor="nw", window=hideDeviceButton)
     # check and download relative version
     checkAndDownloadRelativeVersionButton = tkinter.Button(top, text="CHECK AND DOWNLOAD RELATIVE VERSION", command= checkAndDownloadRelativeVersion, activeforeground="green",  highlightcolor="green")
     canvas1.create_window(0, 200, anchor="nw", window=checkAndDownloadRelativeVersionButton)
-    # hide device
-    hideDeviceButton = tkinter.Button(top, text="HIDE DEVICE", command= hideDevice, activeforeground="green",  highlightcolor="green")
-    canvas1.create_window(0, 200, anchor="nw", window=hideDevice)
     # restart program
     restartProgramButton = tkinter.Button(top, text="RESTART PROGRAM", command= restartProgram, activeforeground="green",  highlightcolor="green")
-    canvas1.create_window(0, 250, anchor="nw", window=restartProgramButton)
+    canvas1.create_window(0, 300, anchor="nw", window=restartProgramButton)
     # run
     top.mainloop()
 
