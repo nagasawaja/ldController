@@ -392,10 +392,13 @@ def checkDeviceRunningHealth(deviceAttrList):
             return False
         # check cpu...
         currentCpuPercent = 0
-        currentCpuPercent = currentCpuPercent + psutil.Process(ldBoxPid).cpu_percent(interval=2) / psutil.cpu_count(logical=True)
-        currentCpuPercent = currentCpuPercent + psutil.Process(dnplayerPid).cpu_percent(interval=2) / psutil.cpu_count(logical=True)
+        currentCpuPercent = currentCpuPercent + psutil.Process(ldBoxPid).cpu_percent(interval=2) / psutil.cpu_count(
+            logical=True)
+        currentCpuPercent = currentCpuPercent + psutil.Process(dnplayerPid).cpu_percent(interval=2) / psutil.cpu_count(
+            logical=True)
         if currentCpuPercent >= limitCpu:
-            print("%s cpuPercent over %d; current cpu percent: %d" % (deviceAttrList[1], limitCpu, currentCpuPercent), flush=True)
+            print("%s cpuPercent over %d; current cpu percent: %d" % (deviceAttrList[1], limitCpu, currentCpuPercent),
+                  flush=True)
             return False
         # check alive duration
         if int(psutil.Process(dnplayerPid).create_time()) + limitDuration <= int(time.time()):
@@ -495,11 +498,12 @@ def backupDevice(deviceAttrList):
         print("%s in %s backupYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
         return
     # quit all device
-    print("restore quit all device and sleep 20s!!!", flush=True)
-    subprocess.run(ldconsole + " quitall", timeout=10)
-    # wait device actually exit
-    time.sleep(20)
-    procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
+    print("restore quit all device and wait quit suc!!!", flush=True)
+    subprocess.run(ldconsole + " quitall", timeout=30)
+    # check device exit suc
+    if checkDeviceAllExit() == False:
+        return
+    procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=15)
     for byteDevice in procList.stdout.splitlines():
         stringDevice = str(byteDevice, encoding="gbk")
         if checkExistNoOpenList(stringDevice) is True:
@@ -519,12 +523,12 @@ def backupDevice(deviceAttrList):
                 os.remove(oldBackupFile)
             os.rename(newBackupFile, oldBackupFile)
             # write backup record to file cache
+            backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][
+                datetime.date.today().strftime("%Y-%m-%d")] = True
             fWrite = open("backupRecord.txt", "w")
             fWrite.write(str(backupAndRestoreDateRecordMap))
             fWrite.close()
             # suc and return true
-            backupAndRestoreDateRecordMap["backup"][deviceAttrList[0]][
-                datetime.date.today().strftime("%Y-%m-%d")] = True
             print("%s backupSuc!!!" % (deviceAttrList[1]), flush=True)
         except Exception as e:
             print("backupFail", flush=True)
@@ -547,13 +551,14 @@ def restoreDevice(deviceAttrList):
         return
     # assert backup yet
     if datetime.date.today().strftime("%Y-%m-%d") in backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]]:
-        print("%s in %s restoreYet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
+        print("%s in %s restore yet!!!" % (deviceAttrList[1], datetime.date.today().strftime("%Y-%m-%d")), flush=True)
         return
     # quit all device
-    print("restore quit all device and sleep 20s!!!", flush=True)
-    subprocess.run(ldconsole + " quitall", timeout=10)
-    # wait device actually exit
-    time.sleep(20)
+    print("restore quit all device and wait suc!!!", flush=True)
+    subprocess.run(ldconsole + " quitall", timeout=15)
+    # check device exit suc
+    if checkDeviceAllExit() == False:
+        return
     procList = subprocess.run(ldconsole + " list2", stdout=subprocess.PIPE, timeout=10)
     for byteDevice in procList.stdout.splitlines():
         stringDevice = str(byteDevice, encoding="gbk")
@@ -569,9 +574,13 @@ def restoreDevice(deviceAttrList):
             if os.path.exists(restoreFile) == False:
                 print("%s restoreFailNotExist!!!" % (restoreFile), flush=True)
                 continue
-            subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=100)
+            subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=120)
             backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]][
                 datetime.date.today().strftime("%Y-%m-%d")] = True
+            # write backup record to file cache
+            fWrite = open("backupRecord.txt", "w")
+            fWrite.write(str(backupAndRestoreDateRecordMap))
+            fWrite.close()
             print("%s restoreSuc!!!" % (deviceAttrList[1]), flush=True)
         except Exception as e:
             print("restoreFail", flush=True)
@@ -579,6 +588,35 @@ def restoreDevice(deviceAttrList):
             time.sleep(120)
             return False
     return "restart"
+
+
+def checkDeviceAllExit():
+    for _ in range(20):
+        # check pid exist dnplayer.exe, LdBoxHeadless.exe, LdBoxSVC.exe
+        breakFlag = False
+        for k in psutil.pids():
+            try:
+                processName = psutil.Process(k).name()
+                if "dnplayer.exe" in processName:
+                    print("find dnplayer.exe exist")
+                    breakFlag = True
+                    break
+                if "LdBoxHeadless.exe" in processName:
+                    print("find LdBoxHeadless.exe exist")
+                    breakFlag = True
+                    break
+                if "LdBoxSVC.exe" in processName:
+                    print("find LdBoxSVC.exe exist")
+                    breakFlag = True
+                    break
+            except:
+                continue
+        if breakFlag == False:
+            print("device all exit")
+            return True
+        time.sleep(1)
+    print("device not all exit")
+    return False
 
 
 def loadBackupAndRestoreDateRecordMapFileCache():
@@ -590,6 +628,7 @@ def loadBackupAndRestoreDateRecordMapFileCache():
     backupAndRestoreDateRecordMap = eval(body)
     fRead.close()
     return
+
 
 class KillableThread(threading.Thread):
     def __init__(self, *args, **kw):
@@ -608,15 +647,19 @@ class KillableThread(threading.Thread):
             # and you should call it again with exc=NULL to revert the effect"""
             ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
             raise SystemError("PyThreadState_SetAsyncExc failed")
+
     def kill(self):
         KillableThread._async_raise(self.ident, SystemExit)
 
 
-startDeviceMonitoringThread = KillableThread()
 def threadIt(func, *args):
-    global startDeviceMonitoringThread
-    startDeviceMonitoringThread = KillableThread(target=func)
-    startDeviceMonitoringThread.start()
+    if func.__name__ == "startDeviceMonitoring":
+        global startDeviceMonitoringThread
+        startDeviceMonitoringThread = KillableThread(target=func)
+        startDeviceMonitoringThread.start()
+    else:
+        ca = KillableThread(target=func)
+        ca.start()
 
 
 def quitAllDevice():
@@ -631,6 +674,10 @@ def quitAllDevice():
 def stopDeviceMonitoring():
     try:
         startDeviceMonitoringThread.kill()
+        print("stop device monitoring after 3 second")
+        time.sleep(3)
+        global startDeviceMonitoringButton
+        startDeviceMonitoringButton["state"] = "normal"
         print("stop device monitoring suc")
     except Exception as e:
         print("quit all device fail")
@@ -669,7 +716,7 @@ def checkAndDownloadRelativeVersion():
 def restartProgram():
     try:
         python = sys.executable
-        os.execl(python, python, * sys.argv)
+        os.execl(python, python, *sys.argv)
         print("restart program suc")
     except Exception as e:
         print("restart program exception")
@@ -689,7 +736,9 @@ def hideDevice():
         print(e)
 
 
-def new():
+def startDeviceMonitoring():
+    startDeviceMonitoringButton['state'] = "disabled"
+    print("star new")
     # load backup cache
     loadBackupAndRestoreDateRecordMapFileCache()
     while True:
@@ -703,11 +752,11 @@ def new():
                     # no handle this device that name exist in noOpenList
                     continue
                 deviceAttrList = stringDevice.split(",")
-                # backup device
-                if backupDevice(deviceAttrList) == "restart":
-                    break
                 # restore device
                 if restoreDevice(deviceAttrList) == "restart":
+                    break
+                # backup device
+                if backupDevice(deviceAttrList) == "restart":
                     break
                 # check device hardware
                 # eample:['0', '雷电模拟器', '2364406', '790452', '1', '24916', '17032']
@@ -723,32 +772,41 @@ def tk():
     top = tkinter.Tk()
     # top.configure(background="black")
     top.geometry("1000x1080")
-    bg = tkinter.PhotoImage(file = "33.gif")
+    bg = tkinter.PhotoImage(file="33.gif")
     # Create Canvas
-    canvas1 = tkinter.Canvas(top, width=1000,height=1080)
+    canvas1 = tkinter.Canvas(top, width=1000, height=1080)
     canvas1.pack(fill="both", expand=True)
     # Display image
-    canvas1.create_image(0, 0, image=bg,anchor="nw")
+    canvas1.create_image(0, 0, image=bg, anchor="nw")
     # start device monitoring
-    startDeviceButton = tkinter.Button(top, text="START DEVICE MONITORING", command=lambda :threadIt(new),activeforeground="green",  highlightcolor="green")
-    canvas1.create_window(0, 0, anchor="nw", window=startDeviceButton)
+    global startDeviceMonitoringButton
+    startDeviceMonitoringButton = tkinter.Button(top, text="START DEVICE MONITORING",
+                                                 command=lambda: threadIt(startDeviceMonitoring))
+    canvas1.create_window(0, 0, anchor="nw", window=startDeviceMonitoringButton)
     # sort device
-    sortDeviceButton = tkinter.Button(top, text="SORT DEVICE", command= sortDevice, activeforeground="green",  highlightcolor="green")
+    sortDeviceButton = tkinter.Button(top, text="SORT DEVICE", command=sortDevice, activeforeground="green",
+                                      highlightcolor="green")
     canvas1.create_window(0, 50, anchor="nw", window=sortDeviceButton)
     # quit all device
-    quitAllDeviceButton = tkinter.Button(top, text="QUIT ALL DEVICE", command= quitAllDevice, activeforeground="green", highlightcolor="green")
+    quitAllDeviceButton = tkinter.Button(top, text="QUIT ALL DEVICE", command=quitAllDevice, activeforeground="green",
+                                         highlightcolor="green")
     canvas1.create_window(0, 100, anchor="nw", window=quitAllDeviceButton)
     # stop device monitoring
-    quitAllDeviceButton = tkinter.Button(top, text="STOP DEVICE MONITORING", command= stopDeviceMonitoring,  activeforeground="green",highlightcolor="green")
-    canvas1.create_window(0, 150, anchor="nw", window=quitAllDeviceButton)
+    stopDeviceMonitoringButton = tkinter.Button(top, text="STOP DEVICE MONITORING",
+                                                command=lambda: threadIt(stopDeviceMonitoring))
+    canvas1.create_window(0, 150, anchor="nw", window=stopDeviceMonitoringButton)
     # hide device
-    hideDeviceButton = tkinter.Button(top, text="HIDE DEVICE", command= hideDevice, activeforeground="green",  highlightcolor="green")
-    canvas1.create_window(0, 250, anchor="nw", window=hideDeviceButton)
+    hideDeviceButton = tkinter.Button(top, text="HIDE DEVICE", command=hideDevice, activeforeground="green",
+                                      highlightcolor="green")
+    canvas1.create_window(0, 200, anchor="nw", window=hideDeviceButton)
     # check and download relative version
-    checkAndDownloadRelativeVersionButton = tkinter.Button(top, text="CHECK AND DOWNLOAD RELATIVE VERSION", command= checkAndDownloadRelativeVersion, activeforeground="green",  highlightcolor="green")
-    canvas1.create_window(0, 200, anchor="nw", window=checkAndDownloadRelativeVersionButton)
+    checkAndDownloadRelativeVersionButton = tkinter.Button(top, text="CHECK AND DOWNLOAD RELATIVE VERSION",
+                                                           command=checkAndDownloadRelativeVersion,
+                                                           activeforeground="green", highlightcolor="green")
+    canvas1.create_window(0, 250, anchor="nw", window=checkAndDownloadRelativeVersionButton)
     # restart program
-    restartProgramButton = tkinter.Button(top, text="RESTART PROGRAM", command= restartProgram, activeforeground="green",  highlightcolor="green")
+    restartProgramButton = tkinter.Button(top, text="RESTART PROGRAM", command=restartProgram, activeforeground="green",
+                                          highlightcolor="green")
     canvas1.create_window(0, 300, anchor="nw", window=restartProgramButton)
     # run
     top.mainloop()
