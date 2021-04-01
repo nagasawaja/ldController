@@ -515,7 +515,7 @@ def backupDevice(deviceAttrList):
             newBackupFile = "%s/%s.backup.ldbk" % (backupAndRestorePath, deviceAttrList[0])
             print(newBackupFile + " beginBackup", flush=True)
             subprocess.run(ldconsole + " backup --index %s --file %s" % (
-                deviceAttrList[0], newBackupFile), timeout=100)
+                deviceAttrList[0], newBackupFile), timeout=200)
             # backup suc, remove old backup file
             oldBackupFile = "%s/%s.ldbk" % (backupAndRestorePath, deviceAttrList[0])
             if os.path.exists(oldBackupFile) == True:
@@ -533,7 +533,6 @@ def backupDevice(deviceAttrList):
         except Exception as e:
             print("backupFail", flush=True)
             print(e, flush=True)
-            time.sleep(120)
             return False
     return "restart"
 
@@ -574,7 +573,7 @@ def restoreDevice(deviceAttrList):
             if os.path.exists(restoreFile) == False:
                 print("%s restoreFailNotExist!!!" % (restoreFile), flush=True)
                 continue
-            subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=120)
+            subprocess.run(ldconsole + " restore --index %s --file %s" % (deviceAttrList[0], restoreFile), timeout=200)
             backupAndRestoreDateRecordMap["restore"][deviceAttrList[0]][
                 datetime.date.today().strftime("%Y-%m-%d")] = True
             # write backup record to file cache
@@ -585,7 +584,6 @@ def restoreDevice(deviceAttrList):
         except Exception as e:
             print("restoreFail", flush=True)
             print(e, flush=True)
-            time.sleep(120)
             return False
     return "restart"
 
@@ -753,11 +751,9 @@ def startDeviceMonitoring():
                     continue
                 deviceAttrList = stringDevice.split(",")
                 # restore device
-                if restoreDevice(deviceAttrList) == "restart":
-                    break
+                restoreDevice(deviceAttrList)
                 # backup device
-                if backupDevice(deviceAttrList) == "restart":
-                    break
+                backupDevice(deviceAttrList)
                 # check device hardware
                 # eample:['0', '雷电模拟器', '2364406', '790452', '1', '24916', '17032']
                 if checkDeviceRunningHealth(deviceAttrList) is False:
