@@ -183,13 +183,9 @@ def checkCurrentActive(deviceAttrList, retryTimes, activeName):
     try:
         currentActiveFlag = False
         for i in range(1, retryTimes):
-            runStatus = subprocess.run(
-                ld + " -s %s adb shell \" dumpsys activity activities | grep mResume\"" % (deviceAttrList[0]),
-                stdout=subprocess.PIPE, timeout=10)
-            runStatus2 = subprocess.run(
-                ldconsole + " adb --index %s --command \"shell dumpsys activity activities | grep mResume\"" % (
-                    deviceAttrList[0]),
-                stdout=subprocess.PIPE, timeout=10)
+            runStatus = subprocess.run(ld + " -s %s adb shell \" dumpsys activity activities | grep mResume\"" % (deviceAttrList[0]), stdout=subprocess.PIPE, timeout=10)
+            runStatus2 = subprocess.run(ldconsole + " adb --index %s --command \"shell dumpsys activity activities | grep mResume\"" % (deviceAttrList[0]), stdout=subprocess.PIPE,
+                                        timeout=10)
             mResumeList = runStatus.stdout.splitlines()
             mResumeList2 = runStatus2.stdout.splitlines()
             activeNameInFlag = False
@@ -246,55 +242,60 @@ def reconnectNetwork():
 def checkAppRunning(deviceAttrList):
     for appName in checkAppRunningList:
         try:
-            appRunningCmd = subprocess.run(
-                ld + " -s %s adb shell \" ps | grep %s\"" % (deviceAttrList[0], appName),
-                stdout=subprocess.PIPE, timeout=10)
-            appRunningCmd2 = subprocess.run(
-                ldconsole + " adb --index %s --command \"shell ps | grep %s\"" % (
-                    deviceAttrList[0], appName),
-                stdout=subprocess.PIPE, timeout=10)
+            appRunningCmd = subprocess.run(ld + " -s %s adb shell \" ps | grep %s\"" % (deviceAttrList[0], appName), stdout=subprocess.PIPE, timeout=10)
+            appRunningCmd2 = subprocess.run(ldconsole + " adb --index %s --command \"shell ps | grep %s\"" % (deviceAttrList[0], appName), stdout=subprocess.PIPE, timeout=10)
             appRunningPsList = appRunningCmd.stdout.splitlines()
             appRunningPsList2 = appRunningCmd2.stdout.splitlines()
-            for l in appRunningPsList:
-                if appName in str(l, encoding="gbk"):
-                    return True
-            for l in appRunningPsList2:
-                if appName in str(l, encoding="gbk"):
-                    return True
-            print("%s %s not running" % (deviceAttrList[1], appName), flush=True)
+            if checkStrInList(appName, appRunningPsList) == True:
+                print("%s check app running1 suc:%s" % (deviceAttrList[1], appName))
+                continue
+            if checkStrInList(appName, appRunningPsList2) == True:
+                print("%s check app running2 suc:%s" % (deviceAttrList[1], appName))
+                continue
+            print("%s check app running fail:%s" % (deviceAttrList[1], appName), flush=True)
             return False
         except Exception as e:
             print("checkAppRunning except exception", flush=True)
             print(e, flush=True)
             return False
+    return True
 
 
 def checkCurrentFocus(deviceAttrList):
     for checkCurrentFocusName in checkCurrentFocusList:
         try:
+            breakFlag = False
             for retryTimes in range(checkCurrentFocusList[checkCurrentFocusName]['retryTimes']):
-                currentFocusCmd = subprocess.run(
-                    ld + " -s %s adb shell \" dumpsys window windows | grep 'mCurrentFocus'\"",
-                    stdout=subprocess.PIPE, timeout=10)
-                currentFocusCmd2 = subprocess.run(
-                    ldconsole + " adb --index %s --command \"shell dumpsys window windows | grep 'mCurrentFocus'\"",
-                    stdout=subprocess.PIPE, timeout=10)
+                b = ld + " -s %s adb shell \" dumpsys window windows | grep 'mCurrentFocus'\"" % (deviceAttrList[0])
+                c = ldconsole + " adb --index %s --command \"shell dumpsys window windows | grep 'mCurrentFocus'\"" % (deviceAttrList[0])
+                currentFocusCmd = subprocess.run(b, stdout=subprocess.PIPE, timeout=10)
+                currentFocusCmd2 = subprocess.run(c, stdout=subprocess.PIPE, timeout=10)
                 currentFocusPsList = currentFocusCmd.stdout.splitlines()
                 currentFocusPsList2 = currentFocusCmd2.stdout.splitlines()
-                for l in currentFocusPsList:
-                    if checkCurrentFocusName in str(l, encoding="gbk"):
-                        return True
-                for l in currentFocusPsList2:
-                    if checkCurrentFocusName in str(l, encoding="gbk"):
-                        return True
-                print("%s %s is not focus, retryTimes:%s" % (deviceAttrList[1], checkCurrentFocusName, retryTimes),
-                      flush=True)
+                if checkStrInList(checkCurrentFocusName, currentFocusPsList) == True:
+                    print("%s check current focus1 suc:%s" % (deviceAttrList[1], checkCurrentFocusName))
+                    breakFlag = True
+                    break
+                if checkStrInList(checkCurrentFocusName, currentFocusPsList2) == True:
+                    print("%s check current focus2 suc:%s" % (deviceAttrList[1], checkCurrentFocusName))
+                    breakFlag = True
+                    break
+                print("%s %s is not focus, retryTimes:%s" % (deviceAttrList[1], checkCurrentFocusName, retryTimes), flush=True)
                 time.sleep(1)
-            return False
+            if breakFlag == False:
+                return False
         except Exception as e:
             print("checkCurrentFocus except exception", flush=True)
             print(e, flush=True)
             return False
+    return True
+
+
+def checkStrInList(findString, targetList):
+    for targetString in targetList:
+        if findString in str(targetString, encoding="gbk"):
+            return True
+    return False
 
 
 def killLeiDianGameCenter(deviceAttrList):
@@ -375,53 +376,42 @@ def checkDeviceRunningHealth(deviceAttrList):
         # check device running status
         if runningStatus != "1":
             return False
+        print("%s suc and running status:%s" % (deviceAttrList[1], runningStatus))
         # check device pid exists...device display
         if psutil.pid_exists(dnplayerPid) is False:
             print("%s dnplayerPid device display not exist" % (deviceAttrList[1]), flush=True)
             return False
+        print("%s suc dnplayer Pid:%s" % (deviceAttrList[1], dnplayerPid))
         # check divce pid exists...device service
         if psutil.pid_exists(ldBoxPid) is False:
             print("%s ldboxPid device service not exist" % (deviceAttrList[1]), flush=True)
             return False
+        print("%s suc ldBox Pid:%s" % (deviceAttrList[1], ldBoxPid))
         # check memory
-        if (psutil.Process(dnplayerPid).memory_info().rss + psutil.Process(
-                ldBoxPid).memory_info().rss) / 1024 / 1024 > limitMemory:
-            print("%s memory:%dMB;limitMemory:%dMB" % (deviceAttrList[1], (
-                    psutil.Process(dnplayerPid).memory_info().rss + psutil.Process(
-                ldBoxPid).memory_info().rss) / 1024 / 1024, limitMemory), flush=True)
+        currentMemory = (psutil.Process(dnplayerPid).memory_info().rss + psutil.Process(ldBoxPid).memory_info().rss) / 1024 / 1024
+        if currentMemory > limitMemory:
+            print("%s memory:%dMB;limitMemory:%dMB" % (deviceAttrList[1], currentMemory, limitMemory), flush=True)
             return False
+        print("%s suc current memory:%sMB" % (deviceAttrList[1], int(currentMemory)))
         # check cpu...
         currentCpuPercent = 0
-        currentCpuPercent = currentCpuPercent + psutil.Process(ldBoxPid).cpu_percent(interval=2) / psutil.cpu_count(
-            logical=True)
-        currentCpuPercent = currentCpuPercent + psutil.Process(dnplayerPid).cpu_percent(interval=2) / psutil.cpu_count(
-            logical=True)
+        currentCpuPercent = currentCpuPercent + psutil.Process(ldBoxPid).cpu_percent(interval=1) / psutil.cpu_count(logical=True)
+        currentCpuPercent = currentCpuPercent + psutil.Process(dnplayerPid).cpu_percent(interval=1) / psutil.cpu_count(logical=True)
         if currentCpuPercent >= limitCpu:
-            print("%s cpuPercent over %d; current cpu percent: %d" % (deviceAttrList[1], limitCpu, currentCpuPercent),
-                  flush=True)
+            print("%s cpuPercent over %d; current cpu percent: %d" % (deviceAttrList[1], limitCpu, currentCpuPercent), flush=True)
             return False
+        print("%s suc current cpu:%s%%" % (deviceAttrList[1], currentCpuPercent))
         # check alive duration
         if int(psutil.Process(dnplayerPid).create_time()) + limitDuration <= int(time.time()):
-            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s" % (deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S",
-                                                                                                    time.localtime(
-                                                                                                        psutil.Process(
-                                                                                                            dnplayerPid).create_time())),
-                                                                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(
-                                                                       psutil.Process(
-                                                                           dnplayerPid).create_time() + limitDuration)),
-                                                                   time.strftime("%Y-%m-%d %H:%M:%S",
-                                                                                 time.localtime())), flush=True)
+            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s" % (
+                deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(dnplayerPid).create_time())),
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(dnplayerPid).create_time() + limitDuration)),
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())), flush=True)
             return False
         if int(psutil.Process(ldBoxPid).create_time()) + limitDuration <= int(time.time()):
-            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s" % (deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S",
-                                                                                                    time.localtime(
-                                                                                                        psutil.Process(
-                                                                                                            ldBoxPid).create_time())),
-                                                                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(
-                                                                       psutil.Process(
-                                                                           ldBoxPid).create_time() + limitDuration)),
-                                                                   time.strftime("%Y-%m-%d %H:%M:%S",
-                                                                                 time.localtime())), flush=True)
+            print("%s createTime:%s;maxAliveTime:%s;nowTime:%s" % (deviceAttrList[1], time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(ldBoxPid).create_time())),
+                                                                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(psutil.Process(ldBoxPid).create_time() + limitDuration)),
+                                                                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())), flush=True)
             return False
         # check app running
         if checkAppRunning(deviceAttrList) is False:
@@ -435,11 +425,32 @@ def checkDeviceRunningHealth(deviceAttrList):
         if checkPacFlag == True and checkPac(deviceAttrList) == False:
             print("%s checkPacFlag Fail" % (deviceAttrList[1]), flush=True)
             return False
+        # check device file system
+        if checkDeviceFileSystem(deviceAttrList) is False:
+            print("%s check device file system Fail" % (deviceAttrList[1]), flush=True)
+            return False
         return True
     except Exception as e:
         print(e, flush=True)
         print("%s fuckCheckDeviceRunningHealth" % (deviceAttrList[1]), flush=True)
         return False
+
+
+def checkDeviceFileSystem(deviceAttrList):
+    runStatus = subprocess.run(ld + " -s %s adb shell \" ls -d /mnt/shell/emulated/0/TouchSprite\"" % (deviceAttrList[0]), stdout=subprocess.PIPE, timeout=10)
+    runStatus2 = subprocess.run(ldconsole + " adb --index %s --command \"shell ls -d /mnt/shell/emulated/0/TouchSprite\"" % (deviceAttrList[0]), stdout=subprocess.PIPE,
+                                timeout=10)
+    mResumeList = runStatus.stdout.splitlines()
+    mResumeList2 = runStatus2.stdout.splitlines()
+    for tp in mResumeList:
+        if "/mnt/shell/emulated/0/TouchSprite" in str(tp, encoding="gbk"):
+            print("%s TouchSprite file path exist" % (deviceAttrList[1]))
+            return True
+    for tp in mResumeList2:
+        if "/mnt/shell/emulated/0/TouchSprite" in str(tp, encoding="gbk"):
+            print("%s TouchSprite file path exist2" % (deviceAttrList[1]))
+            return True
+    return False
 
 
 def phonelist1(phone):
@@ -672,8 +683,8 @@ def quitAllDevice():
 def stopDeviceMonitoring():
     try:
         startDeviceMonitoringThread.kill()
-        print("stop device monitoring after 3 second")
-        time.sleep(3)
+        print("stop device monitoring after 1 second")
+        time.sleep(1)
         global startDeviceMonitoringButton
         startDeviceMonitoringButton["state"] = "normal"
         print("stop device monitoring suc")
@@ -692,20 +703,31 @@ def sortDevice():
 
 
 def checkAndDownloadRelativeVersion():
+    # try:
+    #     responseObject = requests.post(checkVersionUrl)
+    #     responseJson = responseObject.json()
+    #     print("latest version:" + responseJson["androidDeviceMonitoringVersion"] + ";current version:" + currentVersion)
+    #     if responseJson["androidDeviceMonitoringVersion"] > currentVersion:
+    #         print("need update")
+    #         print("unzip relative version suc")
+    # except Exception as e:
+    #     print("check and download relative version exception")
+    #     print(e)
     try:
-        responseObject = requests.post(checkVersionUrl)
-        responseJson = responseObject.json()
-        print("latest version:" + responseJson["androidDeviceMonitoringVersion"] + ";current version:" + currentVersion)
-        if responseJson["androidDeviceMonitoringVersion"] > currentVersion:
-            print("need update")
-            # download latest and unzip
-            r = requests.get(downloadLatestVersionUrl)
-            with open("ldController.zip", "wb") as code:
-                code.write(r.content)
-            zipFile = zipfile.ZipFile(file="ldController.zip")
-            for names in zipFile.namelist():
-                zipFile.extract(names, "./")
-            print("unzip relative version suc")
+        # download latest and unzip
+        rData = requests.get(downloadLatestVersionUrl, stream=True)
+        chunkSize = 1024
+        size = 0
+        contentSize = int(rData.headers['content-length'])  # 返回的response的headers中获取文件大小信息
+        with open("ldController.zip", "wb") as code:
+            for data in rData.iter_content(chunk_size=chunkSize):
+                code.write(data)
+                size = len(data) + size
+                # 'r'每次重新从开始输出，end = ""是不换行
+                print('\r' + "进度：" + int(size / contentSize * 30) * "█" + f" 【{format(size / chunkSize / 1024, '.2f')}MB】 【{format(size / contentSize, '.2%')}】", end="")
+        # zipFile = zipfile.ZipFile(file="ldController.zip")
+        # for names in zipFile.namelist():
+        #     zipFile.extract(names, "./")
     except Exception as e:
         print("check and download relative version exception")
         print(e)
@@ -736,7 +758,7 @@ def hideDevice():
 
 def startDeviceMonitoring():
     startDeviceMonitoringButton['state'] = "disabled"
-    print("star new")
+    print("star start device monitoring")
     # load backup cache
     loadBackupAndRestoreDateRecordMapFileCache()
     while True:
@@ -758,10 +780,29 @@ def startDeviceMonitoring():
                 # eample:['0', '雷电模拟器', '2364406', '790452', '1', '24916', '17032']
                 if checkDeviceRunningHealth(deviceAttrList) is False:
                     restartDevice(deviceAttrList)
+                else:
+                    print("%s is health" % (deviceAttrList[1]))
             print("sleepAt:" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), flush=True)
             time.sleep(60)
         except Exception as e:
             print(e)
+
+
+def pullDeviceLog():
+    try:
+        fList = subprocess.run(
+            ldconsole + " pull --index %s --remote /mnt/shell/emulated/0/TouchSprite/log/%s.log --local ./aa.log" % (
+                pullDeviceLogInput.get(), time.strftime("%Y%m%d", time.localtime())),
+            stdout=subprocess.PIPE, timeout=10)
+        for byteDevice in fList.stdout.splitlines():
+            stringDevice = str(byteDevice, encoding="gbk")
+            if stringDevice != "":
+                print("pull device err:" + stringDevice)
+                return
+        print("pull device suc")
+        os.startfile("aa.log")
+    except Exception as e:
+        print(e)
 
 
 def tk():
@@ -776,34 +817,32 @@ def tk():
     canvas1.create_image(0, 0, image=bg, anchor="nw")
     # start device monitoring
     global startDeviceMonitoringButton
-    startDeviceMonitoringButton = tkinter.Button(top, text="START DEVICE MONITORING",
-                                                 command=lambda: threadIt(startDeviceMonitoring))
+    startDeviceMonitoringButton = tkinter.Button(top, text="START DEVICE MONITORING", command=lambda: threadIt(startDeviceMonitoring))
     canvas1.create_window(0, 0, anchor="nw", window=startDeviceMonitoringButton)
     # sort device
-    sortDeviceButton = tkinter.Button(top, text="SORT DEVICE", command=sortDevice, activeforeground="green",
-                                      highlightcolor="green")
+    sortDeviceButton = tkinter.Button(top, text="SORT DEVICE", command=sortDevice, activeforeground="green", highlightcolor="green")
     canvas1.create_window(0, 50, anchor="nw", window=sortDeviceButton)
     # quit all device
-    quitAllDeviceButton = tkinter.Button(top, text="QUIT ALL DEVICE", command=quitAllDevice, activeforeground="green",
-                                         highlightcolor="green")
+    quitAllDeviceButton = tkinter.Button(top, text="QUIT ALL DEVICE", command=quitAllDevice, activeforeground="green", highlightcolor="green")
     canvas1.create_window(0, 100, anchor="nw", window=quitAllDeviceButton)
     # stop device monitoring
-    stopDeviceMonitoringButton = tkinter.Button(top, text="STOP DEVICE MONITORING",
-                                                command=lambda: threadIt(stopDeviceMonitoring))
+    stopDeviceMonitoringButton = tkinter.Button(top, text="STOP DEVICE MONITORING", command=lambda: threadIt(stopDeviceMonitoring))
     canvas1.create_window(0, 150, anchor="nw", window=stopDeviceMonitoringButton)
     # hide device
-    hideDeviceButton = tkinter.Button(top, text="HIDE DEVICE", command=hideDevice, activeforeground="green",
-                                      highlightcolor="green")
+    hideDeviceButton = tkinter.Button(top, text="HIDE DEVICE", command=hideDevice, activeforeground="green", highlightcolor="green")
     canvas1.create_window(0, 200, anchor="nw", window=hideDeviceButton)
     # check and download relative version
-    checkAndDownloadRelativeVersionButton = tkinter.Button(top, text="CHECK AND DOWNLOAD RELATIVE VERSION",
-                                                           command=checkAndDownloadRelativeVersion,
-                                                           activeforeground="green", highlightcolor="green")
+    checkAndDownloadRelativeVersionButton = tkinter.Button(top, text="CHECK AND DOWNLOAD RELATIVE VERSION", command=checkAndDownloadRelativeVersion)
     canvas1.create_window(0, 250, anchor="nw", window=checkAndDownloadRelativeVersionButton)
+    # pull device log
+    pullDeviceLogButton = tkinter.Button(top, text="PULL DEVICE LOG BUTTON", command=pullDeviceLog)
+    canvas1.create_window(0, 300, anchor="nw", window=pullDeviceLogButton)
+    global pullDeviceLogInput
+    pullDeviceLogInput = tkinter.Entry(top, bd=5)
+    canvas1.create_window(200, 300, anchor="nw", window=pullDeviceLogInput)
     # restart program
-    restartProgramButton = tkinter.Button(top, text="RESTART PROGRAM", command=restartProgram, activeforeground="green",
-                                          highlightcolor="green")
-    canvas1.create_window(0, 300, anchor="nw", window=restartProgramButton)
+    restartProgramButton = tkinter.Button(top, text="RESTART PROGRAM", command=restartProgram)
+    canvas1.create_window(0, 350, anchor="nw", window=restartProgramButton)
     # run
     top.mainloop()
 
