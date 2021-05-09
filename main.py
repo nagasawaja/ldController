@@ -183,7 +183,7 @@ def checkCurrentActive(deviceAttrList, retryTimes, activeName):
     try:
         currentActiveFlag = False
         for i in range(1, retryTimes):
-            runStatus = subprocess.run(ld + " -s %s adb shell \" dumpsys activity activities | grep mResume\"" % (deviceAttrList[0]), stdout=subprocess.PIPE, timeout=10)
+            runStatus = subprocess.run(ld + " -s %s  \" dumpsys activity activities | grep mResume\"" % (deviceAttrList[0]), stdout=subprocess.PIPE, timeout=10)
             runStatus2 = subprocess.run(ldconsole + " adb --index %s --command \"shell dumpsys activity activities | grep mResume\"" % (deviceAttrList[0]), stdout=subprocess.PIPE,
                                         timeout=10)
             mResumeList = runStatus.stdout.splitlines()
@@ -242,7 +242,7 @@ def reconnectNetwork():
 def checkAppRunning(deviceAttrList):
     for appName in checkAppRunningList:
         try:
-            appRunningCmd = subprocess.run(ld + " -s %s adb shell \" ps | grep %s\"" % (deviceAttrList[0], appName), stdout=subprocess.PIPE, timeout=10)
+            appRunningCmd = subprocess.run(ld + " -s %s  \" ps | grep %s\"" % (deviceAttrList[0], appName), stdout=subprocess.PIPE, timeout=10)
             appRunningCmd2 = subprocess.run(ldconsole + " adb --index %s --command \"shell ps | grep %s\"" % (deviceAttrList[0], appName), stdout=subprocess.PIPE, timeout=10)
             appRunningPsList = appRunningCmd.stdout.splitlines()
             appRunningPsList2 = appRunningCmd2.stdout.splitlines()
@@ -266,7 +266,7 @@ def checkCurrentFocus(deviceAttrList):
         try:
             breakFlag = False
             for retryTimes in range(checkCurrentFocusList[checkCurrentFocusName]['retryTimes']):
-                b = ld + " -s %s adb shell \" dumpsys window windows | grep 'mCurrentFocus'\"" % (deviceAttrList[0])
+                b = ld + " -s %s  \" dumpsys window windows | grep 'mCurrentFocus'\"" % (deviceAttrList[0])
                 c = ldconsole + " adb --index %s --command \"shell dumpsys window windows | grep 'mCurrentFocus'\"" % (deviceAttrList[0])
                 currentFocusCmd = subprocess.run(b, stdout=subprocess.PIPE, timeout=10)
                 currentFocusCmd2 = subprocess.run(c, stdout=subprocess.PIPE, timeout=10)
@@ -301,7 +301,7 @@ def checkStrInList(findString, targetList):
 def killLeiDianGameCenter(deviceAttrList):
     try:
         leiDianGameCenterCmd = subprocess.run(
-            ld + " -s %s adb shell \" ps | grep com.android.flysilkworm\"" % (deviceAttrList[0]),
+            ld + " -s %s  \" ps | grep com.android.flysilkworm\"" % (deviceAttrList[0]),
             stdout=subprocess.PIPE, timeout=10)
         leiDianGameCenterCmd2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.android.flysilkworm\"" % (
@@ -313,7 +313,7 @@ def killLeiDianGameCenter(deviceAttrList):
             if "com.android.flysilkworm" in str(l, encoding="gbk"):
                 print("%s killLeiDianGameCenter" % (deviceAttrList[1]), flush=True)
                 subprocess.run(
-                    ld + " -s %s adb shell \" kill -9 %s\"" % (deviceAttrList[0], l.split()[1].decode('utf-8')),
+                    ld + " -s %s  \" kill -9 %s\"" % (deviceAttrList[0], l.split()[1].decode('utf-8')),
                     stdout=subprocess.PIPE, timeout=10)
                 return True
         for l in leiDianGameCenterPsList2:
@@ -336,7 +336,7 @@ def checkPac(deviceAttrList):
         return True
     try:
         id5HookStatus = subprocess.run(
-            ld + " -s %s adb shell \" ps | grep com.android.pacprocessor\"" % (deviceAttrList[0]),
+            ld + " -s %s  \" ps | grep com.android.pacprocessor\"" % (deviceAttrList[0]),
             stdout=subprocess.PIPE, timeout=10)
         id5HookStatus2 = subprocess.run(
             ldconsole + " adb --index %s --command \"shell ps | grep com.android.pacprocessor\"" % (
@@ -437,17 +437,17 @@ def checkDeviceRunningHealth(deviceAttrList):
 
 
 def checkDeviceFileSystem(deviceAttrList):
-    runStatus = subprocess.run(ld + " -s %s adb shell \" ls -d /mnt/shell/emulated/0/TouchSprite\"" % (deviceAttrList[0]), stdout=subprocess.PIPE, timeout=10)
-    runStatus2 = subprocess.run(ldconsole + " adb --index %s --command \"shell ls -d /mnt/shell/emulated/0/TouchSprite\"" % (deviceAttrList[0]), stdout=subprocess.PIPE,
+    runStatus = subprocess.run(ld + " -s %s  \" ls -d /mnt/sdcard/TouchSprite\"" % (deviceAttrList[0]), stdout=subprocess.PIPE, timeout=10)
+    runStatus2 = subprocess.run(ldconsole + " adb --index %s --command \"shell ls -d /mnt/sdcard/TouchSprite\"" % (deviceAttrList[0]), stdout=subprocess.PIPE,
                                 timeout=10)
     mResumeList = runStatus.stdout.splitlines()
     mResumeList2 = runStatus2.stdout.splitlines()
     for tp in mResumeList:
-        if "/mnt/shell/emulated/0/TouchSprite" in str(tp, encoding="gbk"):
+        if "/mnt/sdcard/TouchSprite" in str(tp, encoding="gbk"):
             print("%s TouchSprite file path exist" % (deviceAttrList[1]))
             return True
     for tp in mResumeList2:
-        if "/mnt/shell/emulated/0/TouchSprite" in str(tp, encoding="gbk"):
+        if "/mnt/sdcard/TouchSprite" in str(tp, encoding="gbk"):
             print("%s TouchSprite file path exist2" % (deviceAttrList[1]))
             return True
     return False
@@ -790,10 +790,9 @@ def startDeviceMonitoring():
 
 def pullDeviceLog():
     try:
-        fList = subprocess.run(
-            ldconsole + " pull --index %s --remote /mnt/shell/emulated/0/TouchSprite/log/%s.log --local ./aa.log" % (
-                pullDeviceLogInput.get(), time.strftime("%Y%m%d", time.localtime())),
-            stdout=subprocess.PIPE, timeout=10)
+        a = ldconsole + " pull --index %s --remote /mnt/sdcard/TouchSprite/log/%s.log --local ./aa.log" % (pullDeviceLogInput.get(), time.strftime("%Y%m%d", time.localtime()))
+        # a = ldconsole + " pull --index %s --remote charger --local ./aa.log" % (pullDeviceLogInput.get())
+        fList = subprocess.run(a, stdout=subprocess.PIPE, timeout=10)
         for byteDevice in fList.stdout.splitlines():
             stringDevice = str(byteDevice, encoding="gbk")
             if stringDevice != "":
