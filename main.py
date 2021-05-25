@@ -31,6 +31,7 @@ initConfig()
 ldPath = cconfig["cc"]["ldpath"]
 ldconsole = ldPath + cconfig["cc"]["ldconsole"]
 ld = ldPath + cconfig["cc"]['ld']
+adbConsole = ldPath + cconfig["cc"]['adbConsole']
 backupAndRestorePath = ldPath + cconfig["cc"]['backupAndRestorePath']
 lastReconnectTime = time.time()
 noOpenList = json.loads(cconfig["cc"]['noOpenList'])
@@ -790,18 +791,28 @@ def startDeviceMonitoring():
 
 def pullDeviceLog():
     try:
-        a = ldconsole + " pull --index %s --remote /mnt/sdcard/TouchSprite/log/%s.log --local ./aa.log" % (pullDeviceLogInput.get(), time.strftime("%Y%m%d", time.localtime()))
+        a = adbConsole + " -s %s pull /storage/emulated/0/TouchSprite/log/%s.log ./aa.log" % (getDevicePort(pullDeviceLogInput.get()), time.strftime("%Y%m%d", time.localtime()))
+
+        # a = ldconsole + " pull --index %s --remote /mnt/sdcard/TouchSprite/log/%s.log --local ./aa.log" % (pullDeviceLogInput.get(), time.strftime("%Y%m%d", time.localtime()))
         # a = ldconsole + " pull --index %s --remote charger --local ./aa.log" % (pullDeviceLogInput.get())
         fList = subprocess.run(a, stdout=subprocess.PIPE, timeout=10)
         for byteDevice in fList.stdout.splitlines():
             stringDevice = str(byteDevice, encoding="gbk")
-            if stringDevice != "":
-                print("pull device err:" + stringDevice)
+            if "1 file pulled" in stringDevice:
+                print("pull device suc")
+                os.startfile("aa.log")
                 return
-        print("pull device suc")
-        os.startfile("aa.log")
+            print("pull device err:" + stringDevice)
+            return
     except Exception as e:
         print(e)
+
+
+def getDevicePort(deviceIndex):
+    zeroPort = 5555
+    zeroPort = zeroPort + int(deviceIndex) * 2
+    aa = str(zeroPort)
+    return "127.0.0.1:" + aa
 
 
 def tk():
@@ -844,6 +855,5 @@ def tk():
     canvas1.create_window(0, 350, anchor="nw", window=restartProgramButton)
     # run
     top.mainloop()
-
 
 tk()
