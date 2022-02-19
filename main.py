@@ -117,7 +117,7 @@ def restartDevice(deviceAttrList):
     # set the device info
     randomManuFacturer = random.choice(list(mobileBrand))
     modifyParamsStr = ldconsole + " modify --index %s --manufacturer %s --model %s --pnumber %s --resolution %s,%s,%s --cpu %s --memory %s" % (
-        deviceAttrList[0], randomManuFacturer, randName.gen_two_words("'"), randomPhoneNumber(),
+        deviceAttrList[0], randomManuFacturer, deviceAttrList[1] + '-' + randName.gen_two_words("'"), randomPhoneNumber(),
         resolutionModelList[resolutionModel]["x"],
         resolutionModelList[resolutionModel]["y"], resolutionModelList[resolutionModel]["dpi"], deviceCpuNum,
         deviceMemoryNum)
